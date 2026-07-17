@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+const PIPELINE_ID = "ZqoHzM5x9u1bMBCFA4N6";
+
 export async function GET() {
   try {
     const GHL_API_KEY = process.env.GHL_PRIVATE_TOKEN;
@@ -52,10 +54,12 @@ export async function GET() {
       return NextResponse.json(defaultStats);
     }
 
-    // 1. Fetch total count of GHL contacts and recent leads list
     let capturedLeads = defaultStats.capturedLeads;
     let recentLeads = defaultStats.recentLeads;
+    let jobsDispatched = defaultStats.jobsDispatched;
+    let savedRevenue = defaultStats.savedRevenue;
 
+    // 1. Fetch total count of GHL contacts and recent leads list
     try {
       const contactsRes = await fetch(
         `https://services.leadconnectorhq.com/contacts/?locationId=${LOCATION_ID}&limit=5`,
@@ -71,29 +75,24 @@ export async function GET() {
       if (contactsRes.ok) {
         const contactsData = await contactsRes.json();
         
-        // Extract total contacts from metadata
         if (contactsData.meta && typeof contactsData.meta.total === "number") {
           capturedLeads = contactsData.meta.total;
         }
 
-        // Map recent 5 GHL contacts to our dashboard feed list
         const contactsList = contactsData.contacts || [];
         if (contactsList.length > 0) {
           recentLeads = contactsList.map((contact: any) => {
-            // Mask phone numbers slightly for privacy
             let phone = contact.phone || "No Phone";
             if (phone !== "No Phone" && phone.length > 6) {
               phone = phone.slice(0, 4) + "***" + phone.slice(-4);
             }
             
-            // Mask email slightly
             let email = contact.email || "No Email";
             if (email !== "No Email" && email.includes("@")) {
               const [name, domain] = email.split("@");
               email = name.slice(0, 3) + "***@" + domain;
             }
 
-            // Determine lead channel source based on tags or properties
             let source = "Web Lead";
             const tags = contact.tags || [];
             if (tags.includes("plumbify-site-lead")) {
@@ -115,18 +114,15 @@ export async function GET() {
             };
           });
         }
-      } else {
-        console.error("GHL Contacts API error status:", contactsRes.status);
       }
     } catch (err) {
       console.error("Failed to fetch GHL contacts count:", err);
     }
 
-    // 2. Fetch total count of GHL conversations
-    let jobsDispatched = defaultStats.jobsDispatched;
+    // 2. Fetch GHL Opportunities stats for the plumbing pipeline
     try {
-      const convRes = await fetch(
-        `https://services.leadconnectorhq.com/conversations/search?locationId=${LOCATION_ID}&limit=1`,
+      const oppsRes = await fetch(
+        `https://services.leadconnectorhq.com/opportunities/search?locationId=${LOCATION_ID}&pipelineId=${PIPELINE_ID}&limit=100`,
         {
           headers: {
             "Authorization": `Bearer ${GHL_API_KEY}`,
@@ -136,27 +132,36 @@ export async function GET() {
         }
       );
 
-      if (convRes.ok) {
-        const convData = await convRes.json();
-        if (convData.total !== undefined && typeof convData.total === "number") {
-          // Map total conversations to jobsDispatched/conversations in GHL
-          jobsDispatched = convData.total;
+      if (oppsRes.ok) {
+        const oppsData = await oppsRes.json();
+        const opportunities = oppsData.opportunities || [];
+        
+        // jobsDispatched is the total number of plumbing opportunities
+        if (opportunities.length > 0) {
+          jobsDispatched = opportunities.length;
         }
-      } else {
-        console.error("GHL Conversations API error status:", convRes.status);
+
+        // Calculate saved revenue dynamically based on all open & won opportunities
+        // Fallback to defaultStats if there are no opportunities or they have 0 monetary value
+        let calculatedRevenue = 0;
+        opportunities.forEach((opp: any) => {
+          if (opp.status === "won" || opp.status === "open") {
+            calculatedRevenue += (opp.monetaryValue || 820); // Default to $820 per job if not set
+          }
+        });
+        
+        if (calculatedRevenue > 0) {
+          savedRevenue = calculatedRevenue;
+        }
       }
     } catch (err) {
-      console.error("Failed to fetch GHL conversations count:", err);
+      console.error("Failed to fetch GHL opportunities stats:", err);
     }
-
-    // Calculate dynamic stats
-    // Revenue is calculated using GHL leads * average plumbing ticket value ($820)
-    const savedRevenue = capturedLeads * 820;
 
     return NextResponse.json({
       capturedLeads,
       savedRevenue,
-      responseTime: "4.8 seconds", // AI auto-response speed KPI
+      responseTime: "4.8 seconds", 
       reviewsCount: defaultStats.reviewsCount,
       averageRating: defaultStats.averageRating,
       activeTechs: defaultStats.activeTechs,
