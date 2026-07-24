@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   BarChart3, 
   Users, 
@@ -37,7 +37,9 @@ import {
   Plus,
   MessageSquare,
   Mail,
-  Smartphone
+  Smartphone,
+  Upload,
+  FileSpreadsheet
 } from "lucide-react";
 
 interface CRMContact {
@@ -111,21 +113,29 @@ const DEFAULT_PLUMBERS: PlumberTech[] = [
   { id: "p2", name: "Madison Reed", role: "HVAC & Leak Specialist", phone: "+1 (555) 876-5432", status: "available", currentLocation: "Plano, TX (Near Legacy)", lat: 33.0198, lng: -96.6989, jobsCompleted: 39, activeJob: "Idle / Standing by", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80", rating: 4.95 },
   { id: "p3", name: "Daniel Craig", role: "Commercial Specialist", phone: "+1 (555) 345-6789", status: "on-job", currentLocation: "Dallas Downtown", lat: 32.7767, lng: -96.7970, jobsCompleted: 31, activeJob: "Commercial Water Heater Replacement", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80", rating: 4.8 },
   { id: "p4", name: "Ryan Miller", role: "Sewer Camera Tech", phone: "+1 (555) 901-2345", status: "on-job", currentLocation: "Richardson, TX", lat: 32.9483, lng: -96.7299, jobsCompleted: 28, activeJob: "Emergency Pipe Leak Repair", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80", rating: 4.85 },
-  { id: "p5", name: "Sophia Torres", role: "Residential Plumbing Helper", phone: "+1 (555) 678-9012", status: "available", currentLocation: "Mesquite, TX", lat: 32.7668, lng: -96.5992, jobsCompleted: 24, activeJob: "Idle / Ready for dispatch", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", rating: 4.75 },
+  { id: "p5", name: "Sophia Torres", role: "Residential Helper", phone: "+1 (555) 678-9012", status: "available", currentLocation: "Mesquite, TX", lat: 32.7668, lng: -96.5992, jobsCompleted: 24, activeJob: "Idle / Ready for dispatch", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", rating: 4.75 },
+];
+
+const DEFAULT_CONTACTS: CRMContact[] = [
+  { id: "cnt1", contactName: "Sam DeAngelis", email: "sam@theplumbinghouse.com", phone: "+1 (555) 234-5678", tags: ["VIP Client"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+  { id: "cnt2", contactName: "Dallas Commercial Group", email: "facilities@dallasre.com", phone: "+1 (555) 876-5432", tags: ["Commercial"], dateAdded: "2026-07-23", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+  { id: "cnt3", contactName: "Lisa Kudrow", email: "lisa@planoresidences.com", phone: "+1 (555) 901-2345", tags: ["Residential"], dateAdded: "2026-07-22", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
 ];
 
 const DEFAULT_CONVERSATIONS: CRMConversation[] = [
-  { id: "c1", contactName: "Sam DeAngelis", lastMessage: "I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating...", time: "10 mins ago", unread: true, type: "sms", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
-  { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32 mins ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
-  { id: "c3", contactName: "Lisa Kudrow", lastMessage: "Thanks for sending over the tankless water heater estimate. Let's schedule for Thursday.", time: "2 hours ago", unread: false, type: "sms", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+  { id: "c1", contactName: "Sam DeAngelis", lastMessage: "I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating...", time: "10m ago", unread: true, type: "sms", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+  { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32m ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+  { id: "c3", contactName: "Lisa Kudrow", lastMessage: "Thanks for sending over the tankless water heater estimate.", time: "2h ago", unread: false, type: "sms", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
 ];
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Live Plumber Team State
+  // Plumber Team State
   const [plumbers, setPlumbers] = useState<PlumberTech[]>(DEFAULT_PLUMBERS);
+  const [contacts, setContacts] = useState<CRMContact[]>(DEFAULT_CONTACTS);
+  const [conversations, setConversations] = useState<CRMConversation[]>(DEFAULT_CONVERSATIONS);
 
   // Add Plumber Form State
   const [showAddPlumberModal, setShowAddPlumberModal] = useState(false);
@@ -134,19 +144,28 @@ export default function DashboardPage() {
   const [newPlumberPhone, setNewPlumberPhone] = useState("");
   const [newPlumberLocation, setNewPlumberLocation] = useState("Dallas, TX");
 
-  // Load custom plumbers from localStorage on mount
+  // Add & Import Contact State
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const [showImportCsvModal, setShowImportCsvModal] = useState(false);
+  const [newContactName, setNewContactName] = useState("");
+  const [newContactEmail, setNewContactEmail] = useState("");
+  const [newContactPhone, setNewContactPhone] = useState("");
+  const [newContactTag, setNewContactTag] = useState("Residential");
+
+  // Load custom plumbers & contacts from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("plumbify_custom_plumbers");
-      if (saved) {
-        setPlumbers(JSON.parse(saved));
-      }
+      const savedPlumbers = localStorage.getItem("plumbify_custom_plumbers");
+      if (savedPlumbers) setPlumbers(JSON.parse(savedPlumbers));
+
+      const savedContacts = localStorage.getItem("plumbify_custom_contacts");
+      if (savedContacts) setContacts(JSON.parse(savedContacts));
     } catch (e) {
-      console.warn("Could not load custom plumbers from storage:", e);
+      console.warn("Could not load local storage data:", e);
     }
   }, []);
 
-  // Work Orders (To Do / Doing / Done) - Pure English
+  // Work Orders (To Do / Doing / Done)
   const [workOrders, setWorkOrders] = useState<CRMOpportunity[]>([
     { id: "wo1", name: "Emergency Pipe Repair - Sam DeAngelis", monetaryValue: 1250, stage: "doing", assignedPlumberId: "p4", assignedPlumberName: "Ryan Miller", address: "412 Belt Line Rd, Garland, TX", contact: { name: "Sam DeAngelis", phone: "+1 (555) 234-5678", email: "sam@theplumbinghouse.com" } },
     { id: "wo2", name: "Commercial Water Heater Replacement", monetaryValue: 3400, stage: "doing", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "890 Elm St, Dallas, TX", contact: { name: "Dallas Commercial Group", phone: "+1 (555) 876-5432", email: "billing@dallasgroup.com" } },
@@ -159,16 +178,7 @@ export default function DashboardPage() {
     { id: "wo9", name: "Gas Line Pressure Test & Leak Seal", monetaryValue: 1100, stage: "done", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "600 Commerce St, Dallas, TX", contact: { name: "Rachel Green", phone: "+1 (555) 012-3456", email: "rachel@ralphlauren.com" } },
   ]);
 
-  const [contacts, setContacts] = useState<CRMContact[]>([
-    { id: "cnt1", contactName: "Sam DeAngelis", email: "sam@theplumbinghouse.com", phone: "+1 (555) 234-5678", tags: ["vip-plumber", "outreach-drafted"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
-    { id: "cnt2", contactName: "Dallas Commercial Real Estate", email: "facilities@dallasre.com", phone: "+1 (555) 876-5432", tags: ["commercial-account"], dateAdded: "2026-07-23", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
-    { id: "cnt3", contactName: "Lisa Kudrow", email: "lisa@planoresidences.com", phone: "+1 (555) 901-2345", tags: ["inbound-lead"], dateAdded: "2026-07-22", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
-  ]);
-
-  const [conversations, setConversations] = useState<CRMConversation[]>(DEFAULT_CONVERSATIONS);
   const [invoices, setInvoices] = useState<CRMInvoice[]>([]);
-  
-  // Interactive Modal State
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
@@ -197,15 +207,7 @@ export default function DashboardPage() {
       if (cntRes.ok) {
         const cntData = await cntRes.json();
         if (cntData.contacts && cntData.contacts.length > 0) {
-          setContacts(cntData.contacts);
-        }
-      }
-
-      const invRes = await fetch("/api/invoices");
-      if (invRes.ok) {
-        const invData = await invRes.json();
-        if (invData.invoices && invData.invoices.length > 0) {
-          setInvoices(invData.invoices);
+          setContacts(prev => [...cntData.contacts, ...prev]);
         }
       }
     } catch (err) {
@@ -220,7 +222,7 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  // Calculate To Do / Doing / Done metrics
+  // Metrics
   const todoJobs = workOrders.filter(w => w.stage === "todo");
   const doingJobs = workOrders.filter(w => w.stage === "doing");
   const doneJobs = workOrders.filter(w => w.stage === "done");
@@ -230,19 +232,17 @@ export default function DashboardPage() {
   const doneVal = doneJobs.reduce((acc, curr) => acc + curr.monetaryValue, 0);
   const totalVal = todoVal + doingVal + doneVal;
 
-  // Handle stage change
   const handleStageChange = (jobId: string, newStage: "todo" | "doing" | "done") => {
     setWorkOrders(prev => prev.map(job => job.id === jobId ? { ...job, stage: newStage } : job));
   };
 
-  // Handle AI Dispatch
   const handleDispatch = (jobId: string, plumberName: string) => {
     setWorkOrders(prev => prev.map(job => job.id === jobId ? { ...job, assignedPlumberName: plumberName, stage: "doing" } : job));
     setDispatchSuccessMsg(`Job #${jobId} dispatched to ${plumberName} via SMS!`);
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
-  // Add New Plumber Form Submit
+  // Add Plumber Submit
   const handleAddPlumberSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPlumberName.trim()) return;
@@ -275,9 +275,57 @@ export default function DashboardPage() {
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
+  // Add Single Contact Submit
+  const handleAddContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContactName.trim()) return;
+
+    const newContact: CRMContact = {
+      id: `cnt_${Date.now()}`,
+      contactName: newContactName.trim(),
+      email: newContactEmail.trim() || "client@domain.com",
+      phone: newContactPhone.trim() || "+1 (555) 000-9999",
+      tags: [newContactTag],
+      dateAdded: new Date().toISOString().split("T")[0],
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+    };
+
+    const updated = [newContact, ...contacts];
+    setContacts(updated);
+    try {
+      localStorage.setItem("plumbify_custom_contacts", JSON.stringify(updated));
+    } catch (e) {}
+
+    setNewContactName("");
+    setNewContactEmail("");
+    setNewContactPhone("");
+    setShowAddContactModal(false);
+    setDispatchSuccessMsg(`🎉 Contact ${newContact.contactName} saved to directory!`);
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+  };
+
+  // CSV Import Simulation
+  const handleImportCsv = () => {
+    const csvContacts: CRMContact[] = [
+      { id: `cnt_csv_1`, contactName: "Highland Park Residences", email: "manager@highlandpk.com", phone: "+1 (555) 998-1122", tags: ["CSV Import", "Commercial"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+      { id: `cnt_csv_2`, contactName: "Preston Hollow Villas", email: "hoa@prestonhollow.com", phone: "+1 (555) 887-3344", tags: ["CSV Import", "HOA"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+      { id: `cnt_csv_3`, contactName: "Garland Auto Body Shop", email: "service@garlandauto.com", phone: "+1 (555) 776-5566", tags: ["CSV Import", "Industrial"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }
+    ];
+
+    const updated = [...csvContacts, ...contacts];
+    setContacts(updated);
+    try {
+      localStorage.setItem("plumbify_custom_contacts", JSON.stringify(updated));
+    } catch (e) {}
+
+    setShowImportCsvModal(false);
+    setDispatchSuccessMsg(`📥 Successfully imported 3 customer contacts from CSV!`);
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+  };
+
   return (
     <div className="min-h-screen bg-[#090B12] text-slate-100 font-sans p-4 sm:p-6 lg:p-8 select-none">
-      {/* ----------------- TOP NAVBAR HEADER (NO GHL LOCATION ID) ----------------- */}
+      {/* ----------------- TOP NAVBAR HEADER (NO GHL BRANDING) ----------------- */}
       <header className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/60">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-cyan-400 p-[2px] shadow-lg shadow-indigo-500/20">
@@ -296,7 +344,7 @@ export default function DashboardPage() {
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-cyan-400 font-medium flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> GHL Live Cloud Sync Active
+                <ShieldCheck className="w-3.5 h-3.5" /> Live Cloud Dispatch Sync
               </span>
             </div>
           </div>
@@ -310,7 +358,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Add Plumber Button */}
           <button 
             onClick={() => setShowAddPlumberModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/20"
@@ -342,7 +389,7 @@ export default function DashboardPage() {
       {/* ----------------- BENTO GRID DASHBOARD MAIN ----------------- */}
       <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-5">
 
-        {/* ================= CARD 1: WORK ORDER PIPELINE (TO DO / DOING / DONE - PURE ENGLISH) ================= */}
+        {/* ================= CARD 1: WORK ORDER PIPELINE (TO DO / DOING / DONE) ================= */}
         <div 
           onClick={() => setActiveModal("workorders")}
           className="md:col-span-7 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-violet-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -361,9 +408,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3-Stage Progress Chart Bars (NO CHINESE LABELS) */}
+          {/* 3-Stage Progress Chart Bars */}
           <div className="grid grid-cols-3 gap-3 my-5">
-            {/* TO DO */}
             <div className="bg-[#111320] border border-amber-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-amber-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
@@ -378,7 +424,6 @@ export default function DashboardPage() {
               <span className="text-[10px] text-slate-400 mt-2 block">{((todoVal/totalVal)*100).toFixed(0)}% Workload</span>
             </div>
 
-            {/* DOING */}
             <div className="bg-[#111320] border border-cyan-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-cyan-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
@@ -393,7 +438,6 @@ export default function DashboardPage() {
               <span className="text-[10px] text-slate-400 mt-2 block">{((doingVal/totalVal)*100).toFixed(0)}% Active</span>
             </div>
 
-            {/* DONE */}
             <div className="bg-[#111320] border border-emerald-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-emerald-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
@@ -425,7 +469,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 2: CONVERSION FUNNEL (Top-Right) ================= */}
+        {/* ================= CARD 2: CONVERSION FUNNEL ================= */}
         <div 
           onClick={() => setActiveModal("funnel")}
           className="md:col-span-5 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-cyan-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
@@ -460,7 +504,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 3: REAL CARTO-DARK VECTOR GPS MAP & DISPATCH ================= */}
+        {/* ================= CARD 3: 100% VISIBLE DARK VECTOR SVG MAP & DISPATCH ================= */}
         <div 
           onClick={() => setActiveModal("gps")}
           className="md:col-span-8 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -470,49 +514,57 @@ export default function DashboardPage() {
               <Navigation className="w-5 h-5 text-emerald-400 animate-pulse" />
               <div>
                 <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">
-                  GPS Live Plumber Fleet Radar (Real Dark Map Tiles)
+                  GPS Live Plumber Fleet Radar (Interactive Vector Map)
                 </h2>
-                <p className="text-xs text-slate-400">Live Satellite Vector Map (Garland / Dallas / Plano)</p>
+                <p className="text-xs text-slate-400">Dallas / Garland / Plano / Richardson Fleet Radar</p>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              ● {plumbers.length} Vehicles Connected
+              ● {plumbers.length} Vehicles Online
             </span>
           </div>
 
-          {/* Real CartoDB Dark Vector Map Background Integration */}
-          <div className="h-60 w-full bg-[#090B13] border border-slate-800 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 shadow-inner">
-            {/* Real CartoDB Dark Tiles Iframe / Imagery Overlay */}
-            <iframe 
-              src="https://a.tile.openstreetmap.org/11/484/820.png"
-              className="absolute inset-0 w-full h-full opacity-30 mix-blend-luminosity filter invert grayscale contrast-200 pointer-events-none"
-              title="GPS Vector Map"
-            />
+          {/* 100% Guaranteed SVG Dark Radar Map Container */}
+          <div className="h-60 w-full bg-[#070912] border border-slate-800/90 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 shadow-inner">
+            {/* SVG Dark City Contours & Grid Lines */}
+            <svg className="absolute inset-0 w-full h-full opacity-40 pointer-events-none stroke-slate-700/60" xmlns="http://www.w3.org/2000/svg">
+              <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+              {/* City Road Network Contours */}
+              <path d="M 20,80 Q 200,120 400,60 T 700,180" fill="none" stroke="#38bdf8" strokeWidth="2" opacity="0.3" strokeDasharray="6 6"/>
+              <path d="M 100,200 Q 300,150 500,220 T 900,100" fill="none" stroke="#818cf8" strokeWidth="2" opacity="0.3"/>
+              <path d="M 350,10 Q 380,150 420,290" fill="none" stroke="#34d399" strokeWidth="1.5" opacity="0.4"/>
+            </svg>
 
-            {/* Live GPS Markers Overlays */}
-            <div className="relative z-10 grid grid-cols-2 gap-3 max-w-xl">
+            {/* Live GPS Markers Overlays for Plumbers */}
+            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-2 gap-3 max-w-xl">
               {plumbers.slice(0, 4).map((p, idx) => (
-                <div key={p.id} className="flex items-center gap-2.5 bg-[#121524]/90 backdrop-blur-md p-2 rounded-xl border border-cyan-500/30 shadow-lg">
+                <div key={p.id} className="flex items-center gap-2 bg-[#101322]/90 backdrop-blur-md p-2 rounded-xl border border-cyan-500/40 shadow-lg shadow-cyan-500/10">
                   <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
                   <img src={p.avatar} className="w-6 h-6 rounded-full object-cover ring-1 ring-cyan-400" />
                   <div>
                     <span className="text-xs font-bold text-white block">{p.name}</span>
-                    <span className="text-[10px] text-emerald-400 font-semibold">{p.currentLocation}</span>
+                    <span className="text-[10px] text-emerald-400 font-semibold">{p.currentLocation.split(',')[0]}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-auto z-10 flex items-center justify-between bg-[#121524]/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
-              <span className="text-xs text-slate-300 font-medium">GPS Radar Synchronized • Average Plumber Arrival: 11 mins</span>
+            <div className="mt-auto z-10 flex items-center justify-between bg-[#121524]/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-800">
+              <span className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-emerald-400 animate-spin" />
+                Live Radar Active • Average Response Arrival: 11 mins
+              </span>
               <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                Open Full Radar <ArrowRight className="w-3.5 h-3.5" />
+                Open Radar Console <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </div>
           </div>
         </div>
 
-        {/* ================= CARD 4: PLUMBER TEAM ROSTER & ADD PLUMBER ================= */}
+        {/* ================= CARD 4: PLUMBER TEAM ROSTER ================= */}
         <div 
           onClick={() => setActiveModal("team")}
           className="md:col-span-4 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
@@ -551,88 +603,229 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 5: CRM CONTACTS DIRECTORY CARD (New!) ================= */}
+        {/* ================= CARD 5: COMPACT CONTACTS DIRECTORY CARD (WITH ADD & CSV IMPORT) ================= */}
         <div 
           onClick={() => setActiveModal("contacts")}
-          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-indigo-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
+          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-indigo-500/40 rounded-3xl p-5 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-400" />
+              <Users className="w-4 h-4 text-indigo-400" />
               <div>
-                <h2 className="text-base font-bold text-slate-100 group-hover:text-indigo-400 transition">CRM Contacts Directory</h2>
-                <p className="text-xs text-slate-400">Synced Customer Records & Tags</p>
+                <h2 className="text-sm font-bold text-slate-100 group-hover:text-indigo-400 transition">Customer Contacts</h2>
+                <p className="text-[11px] text-slate-400">{contacts.length} Customers Enrolled</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
-              {contacts.length} Contacts
-            </span>
+
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setShowAddContactModal(true)}
+                className="text-[11px] font-bold text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg transition flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add
+              </button>
+              <button 
+                onClick={() => setShowImportCsvModal(true)}
+                className="text-[11px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg transition flex items-center gap-1"
+              >
+                <Upload className="w-3 h-3" /> Import CSV
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-2.5">
-            {contacts.map((cnt) => (
-              <div key={cnt.id} className="bg-[#0F111B] border border-slate-800/80 p-3 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
-                <div className="flex items-center gap-3">
-                  <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-8 h-8 rounded-full object-cover" />
+          <div className="space-y-2">
+            {contacts.slice(0, 3).map((cnt) => (
+              <div key={cnt.id} className="bg-[#0F111B] border border-slate-800/80 px-3 py-2 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
+                <div className="flex items-center gap-2.5">
+                  <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-7 h-7 rounded-full object-cover" />
                   <div>
                     <span className="text-xs font-bold text-slate-200 block">{cnt.contactName || `${cnt.firstName} ${cnt.lastName}`}</span>
-                    <span className="text-[10px] text-slate-400">{cnt.email} • {cnt.phone}</span>
+                    <span className="text-[10px] text-slate-400">{cnt.phone}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {(cnt.tags || ["vip-plumber"]).slice(0, 2).map((t, idx) => (
-                    <span key={idx} className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                      {t}
-                    </span>
-                  ))}
-                </div>
+                <span className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                  {(cnt.tags || ["Customer"])[0]}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ================= CARD 6: RECENT CONVERSATIONS & AI OUTREACH CARD (New!) ================= */}
+        {/* ================= CARD 6: RECENT CONVERSATIONS CARD ================= */}
         <div 
           onClick={() => setActiveModal("conversations")}
-          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-cyan-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
+          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-cyan-500/40 rounded-3xl p-5 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-cyan-400" />
+              <MessageSquare className="w-4 h-4 text-cyan-400" />
               <div>
-                <h2 className="text-base font-bold text-slate-100 group-hover:text-cyan-400 transition">Recent Conversations & AI Outreach</h2>
-                <p className="text-xs text-slate-400">Live SMS & Email Draft Activity</p>
+                <h2 className="text-sm font-bold text-slate-100 group-hover:text-cyan-400 transition">Recent Conversations</h2>
+                <p className="text-[11px] text-slate-400">SMS & Email Threads</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
-              AI Auto-Draft Active
+            <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+              Active Threads
             </span>
           </div>
 
-          <div className="space-y-2.5">
-            {conversations.map((c) => (
-              <div key={c.id} className="bg-[#0F111B] border border-slate-800/80 p-3 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
-                <div className="flex items-center gap-3">
-                  <img src={c.avatar} className="w-8 h-8 rounded-full object-cover" />
+          <div className="space-y-2">
+            {conversations.slice(0, 3).map((c) => (
+              <div key={c.id} className="bg-[#0F111B] border border-slate-800/80 px-3 py-2 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
+                <div className="flex items-center gap-2.5">
+                  <img src={c.avatar} className="w-7 h-7 rounded-full object-cover" />
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-200">{c.contactName}</span>
-                      <span className="text-[9px] text-slate-500">{c.time}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 truncate max-w-sm">{c.lastMessage}</p>
+                    <span className="text-xs font-bold text-slate-200 block">{c.contactName}</span>
+                    <p className="text-[10px] text-slate-400 truncate max-w-xs">{c.lastMessage}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 uppercase">
-                    {c.type}
-                  </span>
-                </div>
+                <span className="text-[9px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20 uppercase">
+                  {c.type}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
       </main>
+
+      {/* ----------------- MODAL: ADD CONTACT ----------------- */}
+      {showAddContactModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121424] border border-slate-700 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-950/40 relative">
+            <button 
+              onClick={() => setShowAddContactModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Add New Customer Contact</h3>
+                <p className="text-xs text-slate-400">Register client for automatic SMS & job dispatch</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddContactSubmit} className="space-y-4 mt-6">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">Client Full Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Robert Johnson"
+                  value={newContactName}
+                  onChange={(e) => setNewContactName(e.target.value)}
+                  className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Phone Number</label>
+                  <input 
+                    type="text" 
+                    placeholder="+1 (555) 234-5678"
+                    value={newContactPhone}
+                    onChange={(e) => setNewContactPhone(e.target.value)}
+                    className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Email Address</label>
+                  <input 
+                    type="email" 
+                    placeholder="robert@example.com"
+                    value={newContactEmail}
+                    onChange={(e) => setNewContactEmail(e.target.value)}
+                    className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">Customer Category / Tag</label>
+                <select 
+                  value={newContactTag}
+                  onChange={(e) => setNewContactTag(e.target.value)}
+                  className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Residential">Residential Customer</option>
+                  <option value="Commercial">Commercial Account</option>
+                  <option value="VIP Client">VIP Client</option>
+                  <option value="HOA Property">HOA Property</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddContactModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30"
+                >
+                  Save Contact
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- MODAL: IMPORT CSV ----------------- */}
+      {showImportCsvModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121424] border border-slate-700 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative">
+            <button 
+              onClick={() => setShowImportCsvModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Import Customer Spreadsheet (CSV)</h3>
+                <p className="text-xs text-slate-400">Bulk upload existing client records & phone numbers</p>
+              </div>
+            </div>
+
+            <div className="my-6 border-2 border-dashed border-slate-700 hover:border-emerald-500/60 rounded-2xl p-8 text-center bg-[#0A0C16] cursor-pointer transition">
+              <Upload className="w-8 h-8 text-emerald-400 mx-auto mb-2 animate-bounce" />
+              <span className="text-xs font-bold text-slate-200 block">Click or Drop CSV File Here</span>
+              <span className="text-[10px] text-slate-500">Supports .csv, .xlsx format (Name, Phone, Email, Tags)</span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button 
+                type="button"
+                onClick={() => setShowImportCsvModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleImportCsv}
+                className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/30"
+              >
+                Process & Import Sample CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ----------------- MODAL: ADD NEW PLUMBER FORM ----------------- */}
       {showAddPlumberModal && (
@@ -785,11 +978,29 @@ export default function DashboardPage() {
             {/* MODAL: CONTACTS */}
             {activeModal === "contacts" && (
               <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-400" />
-                  CRM Contacts Directory
-                </h3>
-                <p className="text-xs text-slate-400 mb-6">Full synced customer database with tags and phone numbers</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-indigo-400" />
+                      Customer Contacts Directory
+                    </h3>
+                    <p className="text-xs text-slate-400">Full client records and bulk imported customer list</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => setShowAddContactModal(true)}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                    <button 
+                      onClick={() => setShowImportCsvModal(true)}
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center gap-1"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> Import CSV
+                    </button>
+                  </div>
+                </div>
 
                 <div className="space-y-3">
                   {contacts.map((cnt) => (
@@ -802,43 +1013,12 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {(cnt.tags || ["vip-plumber"]).map((t, idx) => (
+                        {(cnt.tags || ["Customer"]).map((t, idx) => (
                           <span key={idx} className="text-[10px] font-semibold text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
                             {t}
                           </span>
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* MODAL: CONVERSATIONS */}
-            {activeModal === "conversations" && (
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-cyan-400" />
-                  Recent Conversations & AI Outreach
-                </h3>
-                <p className="text-xs text-slate-400 mb-6">Detailed log of AI generated SMS drafts and email threads</p>
-
-                <div className="space-y-3">
-                  {conversations.map((c) => (
-                    <div key={c.id} className="bg-[#161928] border border-slate-800 p-4 rounded-2xl flex items-center justify-between hover:border-cyan-500/40 transition">
-                      <div className="flex items-center gap-3">
-                        <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-slate-100">{c.contactName}</h4>
-                            <span className="text-xs text-slate-400">{c.time}</span>
-                          </div>
-                          <p className="text-xs text-slate-300 mt-1">{c.lastMessage}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20 uppercase">
-                        {c.type}
-                      </span>
                     </div>
                   ))}
                 </div>
