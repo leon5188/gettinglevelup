@@ -47,7 +47,8 @@ import {
   Mic,
   Play,
   Volume2,
-  Square
+  Square,
+  Bot
 } from "lucide-react";
 
 interface CRMContact {
@@ -98,6 +99,7 @@ interface CallLog {
   transcript: string;
   speechText: string;
   estimatedValue: number;
+  provider?: string;
   status: "AI Booked" | "Live Dispatched" | "Inbound Missed";
 }
 
@@ -153,17 +155,17 @@ const DEMO_CONTACTS: CRMContact[] = [
 const DEMO_CALLS: CallLog[] = [
   { 
     id: "call1", callerName: "Mrs. Sarah Jenkins", phone: "+1 (555) 987-6543", time: "12 mins ago", duration: "1m 45s", 
-    aiSummary: "Emergency slab leak under kitchen tile. AI Receptionist booked appointment for 2:00 PM.", 
-    transcript: "Customer: 'Hi, I have water leaking under my kitchen tile and need someone fast!' \nPlumbify AI: 'I understand this is an emergency. I have scheduled Master Plumber Ava Vance to arrive at your home at 2:00 PM today. Sending confirmation SMS now.'",
-    speechText: "Hello Sarah. Plumbify AI receptionist here. I have scheduled Master Plumber Ava Vance to arrive at your home for the kitchen slab leak at 2:00 PM today.",
-    estimatedValue: 1450, status: "AI Booked" 
+    aiSummary: "Emergency slab leak under kitchen tile. GHL Voice AI booked appointment for 2:00 PM.", 
+    transcript: "Customer: 'Hi, I have water leaking under my kitchen tile and need someone fast!' \nGHL Voice AI: 'I understand this is an emergency. I have scheduled Master Plumber Ava Vance to arrive at your home at 2:00 PM today. Sending confirmation SMS now.'",
+    speechText: "Hello Sarah. GHL Voice AI receptionist here. I have scheduled Master Plumber Ava Vance to arrive at your home for the kitchen slab leak at 2:00 PM today.",
+    estimatedValue: 1450, provider: "GoHighLevel Voice AI Native", status: "AI Booked" 
   },
   { 
     id: "call2", callerName: "Marcus Vance", phone: "+1 (555) 456-7890", time: "45 mins ago", duration: "2m 10s", 
     aiSummary: "Commercial water heater leaking in basement. Dispatched Daniel Craig via SMS.", 
-    transcript: "Customer: 'Our hotel basement water heater is leaking.' \nPlumbify AI: 'Dispatching Commercial Specialist Daniel Craig immediately to 890 Elm St.'",
+    transcript: "Customer: 'Our hotel basement water heater is leaking.' \nGHL Voice AI: 'Dispatching Commercial Specialist Daniel Craig immediately to 890 Elm St.'",
     speechText: "Hello Marcus. Dispatching Commercial Plumbing Specialist Daniel Craig immediately to your basement water heater at 890 Elm Street.",
-    estimatedValue: 3200, status: "Live Dispatched" 
+    estimatedValue: 3200, provider: "GoHighLevel Voice AI Native", status: "Live Dispatched" 
   },
 ];
 
@@ -225,7 +227,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // Stop previous speech
     window.speechSynthesis?.cancel();
     setPlayingCallId(call.id);
 
@@ -245,14 +246,12 @@ export default function DashboardPage() {
 
       window.speechSynthesis.speak(utterance);
     } else {
-      // Fallback timer if speech API not supported in rare environment
       setTimeout(() => {
         setPlayingCallId(null);
       }, 5000);
     }
   };
 
-  // Stop audio speech when closing modal
   useEffect(() => {
     if (!activeModal && typeof window !== "undefined") {
       window.speechSynthesis?.cancel();
@@ -471,7 +470,7 @@ export default function DashboardPage() {
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-cyan-400 font-medium flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Live Navigation & 24/7 AI Voice Dispatch
+                <Bot className="w-3.5 h-3.5" /> GHL Voice AI Connected & 24/7 Audio Active
               </span>
             </div>
           </div>
@@ -595,21 +594,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 2: AI VOICE 24/7 CALL RADAR CARD ================= */}
+        {/* ================= CARD 2: GHL VOICE AI 24/7 CALL RADAR CARD ================= */}
         <div 
           onClick={() => setActiveModal("calls")}
           className="md:col-span-5 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <PhoneIncoming className="w-5 h-5 text-emerald-400 animate-bounce" />
+              <Bot className="w-5 h-5 text-emerald-400 animate-pulse" />
               <div>
-                <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">AI 24/7 Voice Answering Radar</h2>
-                <p className="text-xs text-slate-400">Click to listen to real AI voice recording</p>
+                <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">GHL Voice AI 24/7 Radar</h2>
+                <p className="text-xs text-slate-400">Native GoHighLevel Phone Agent Connected</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
-              <Mic className="w-3 h-3 text-emerald-400 animate-pulse" /> 100% Answered
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
+              <Mic className="w-3 h-3 text-emerald-400 animate-pulse" /> GHL AI Voice
             </span>
           </div>
 
@@ -880,7 +879,7 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* ----------------- MODAL 1: AI VOICE 24/7 CALL RECORDING & REAL SPEECH AUDIO ----------------- */}
+      {/* ----------------- MODAL 1: GHL VOICE AI RECORDINGS & TRANSCRIPT CONSOLE ----------------- */}
       {activeModal === "calls" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[85vh] overflow-y-auto">
@@ -893,11 +892,16 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                <PhoneIncoming className="w-5 h-5 animate-pulse" />
+                <Bot className="w-5 h-5 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">AI 24/7 Voice Call Recordings & Transcripts</h3>
-                <p className="text-xs text-slate-400">Click Play to hear live Web Audio AI Speech Synthesis</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-white">GoHighLevel (GHL) Voice AI Call Recordings & Transcripts</h3>
+                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
+                    Endpoint: /api/ghl/voice-ai
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">Native GoHighLevel Phone Agent integration with Web Audio API playback</p>
               </div>
             </div>
 
@@ -910,7 +914,7 @@ export default function DashboardPage() {
                         <h4 className="font-bold text-sm text-white">{log.callerName}</h4>
                         <span className="text-xs text-slate-400">({log.phone})</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">{log.time} • Duration: {log.duration}</span>
+                      <span className="text-[10px] text-slate-400">{log.time} • Provider: <strong className="text-emerald-400">{log.provider || 'GoHighLevel Voice AI'}</strong> • Duration: {log.duration}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -919,7 +923,7 @@ export default function DashboardPage() {
                         className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${playingCallId === log.id ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/40 animate-pulse" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"}`}
                       >
                         {playingCallId === log.id ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                        <span>{playingCallId === log.id ? "Stop Audio" : "Play Recording"}</span>
+                        <span>{playingCallId === log.id ? "Stop Audio" : "Play GHL Recording"}</span>
                       </button>
 
                       <span className="text-sm font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-xl border border-cyan-500/20">
@@ -928,19 +932,18 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Audio Speech Waveform Indicator */}
                   {playingCallId === log.id && (
                     <div className="bg-[#0D0F19] border border-emerald-500/50 p-3.5 rounded-xl mb-3 flex items-center gap-3 animate-in fade-in">
                       <Volume2 className="w-5 h-5 text-emerald-400 animate-bounce" />
                       <div className="flex-1 bg-slate-800/80 h-2.5 rounded-full overflow-hidden">
                         <div className="bg-gradient-to-r from-emerald-500 via-cyan-400 to-indigo-500 h-full w-full animate-pulse rounded-full" />
                       </div>
-                      <span className="text-xs text-emerald-400 font-mono font-bold animate-pulse">🔊 Playing Voice Audio...</span>
+                      <span className="text-xs text-emerald-400 font-mono font-bold animate-pulse">🔊 Playing GHL Voice AI Audio...</span>
                     </div>
                   )}
 
                   <div>
-                    <span className="text-xs font-bold text-slate-300 block mb-1">AI Transcript & Call Summary:</span>
+                    <span className="text-xs font-bold text-slate-300 block mb-1">GHL Voice AI Transcript & Call Summary:</span>
                     <div className="bg-[#0A0C16] border border-slate-800/80 p-3.5 rounded-xl text-xs text-slate-300 font-mono whitespace-pre-line leading-relaxed">
                       {log.transcript}
                     </div>
