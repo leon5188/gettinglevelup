@@ -45,7 +45,8 @@ import {
   Trash2,
   PhoneIncoming,
   Mic,
-  Play
+  Play,
+  Volume2
 } from "lucide-react";
 
 interface CRMContact {
@@ -93,6 +94,7 @@ interface CallLog {
   time: string;
   duration: string;
   aiSummary: string;
+  transcript: string;
   estimatedValue: number;
   status: "AI Booked" | "Live Dispatched" | "Inbound Missed";
 }
@@ -147,8 +149,18 @@ const DEMO_CONTACTS: CRMContact[] = [
 ];
 
 const DEMO_CALLS: CallLog[] = [
-  { id: "call1", callerName: "Mrs. Sarah Jenkins", phone: "+1 (555) 987-6543", time: "12 mins ago", duration: "1m 45s", aiSummary: "Emergency slab leak under kitchen tile. AI Receptionist booked appointment for 2:00 PM.", estimatedValue: 1450, status: "AI Booked" },
-  { id: "call2", callerName: "Marcus Vance", phone: "+1 (555) 456-7890", time: "45 mins ago", duration: "2m 10s", aiSummary: "Commercial water heater leaking in basement. Dispatched Daniel Craig via SMS.", estimatedValue: 3200, status: "Live Dispatched" },
+  { 
+    id: "call1", callerName: "Mrs. Sarah Jenkins", phone: "+1 (555) 987-6543", time: "12 mins ago", duration: "1m 45s", 
+    aiSummary: "Emergency slab leak under kitchen tile. AI Receptionist booked appointment for 2:00 PM.", 
+    transcript: "Customer: 'Hi, I have water leaking under my kitchen tile and need someone fast!' \nPlumbify AI: 'I understand this is an emergency. I have scheduled Master Plumber Ava Vance to arrive at your home at 2:00 PM today. Sending confirmation SMS now.'",
+    estimatedValue: 1450, status: "AI Booked" 
+  },
+  { 
+    id: "call2", callerName: "Marcus Vance", phone: "+1 (555) 456-7890", time: "45 mins ago", duration: "2m 10s", 
+    aiSummary: "Commercial water heater leaking in basement. Dispatched Daniel Craig via SMS.", 
+    transcript: "Customer: 'Our hotel basement water heater is leaking.' \nPlumbify AI: 'Dispatching Commercial Specialist Daniel Craig immediately to 890 Elm St.'",
+    estimatedValue: 3200, status: "Live Dispatched" 
+  },
 ];
 
 export default function DashboardPage() {
@@ -165,6 +177,7 @@ export default function DashboardPage() {
     { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32m ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
   ]);
   const [callLogs, setCallLogs] = useState<CallLog[]>(DEMO_CALLS);
+  const [playingCallId, setPlayingCallId] = useState<string | null>(null);
 
   // Custom SMS Dispatch Text State
   const [smsDispatchText, setSmsDispatchText] = useState("");
@@ -198,7 +211,7 @@ export default function DashboardPage() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
-  // Load custom plumbers & contacts from localStorage on mount (Auto-hide Demo Data if Customer Has Added Real Plumbers/Contacts)
+  // Load custom plumbers & contacts from localStorage
   useEffect(() => {
     try {
       const savedPlumbers = localStorage.getItem("plumbify_custom_plumbers");
@@ -231,7 +244,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // One-click Clear Demo Data / Reset
   const handleClearDemoData = () => {
     try {
       localStorage.removeItem("plumbify_custom_plumbers");
@@ -316,7 +328,6 @@ export default function DashboardPage() {
       rating: 5.0
     };
 
-    // If using demo data previously, replace with customer's real plumber
     const basePlumbers = isUsingCustomData ? plumbers : [];
     const updated = [newPlumber, ...basePlumbers];
 
@@ -368,7 +379,6 @@ export default function DashboardPage() {
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
-  // CSV Import Simulation
   const handleImportCsv = () => {
     const csvContacts: CRMContact[] = [
       { id: `cnt_csv_1`, contactName: "Highland Park Residences", email: "manager@highlandpk.com", phone: "+1 (555) 998-1122", tags: ["CSV Import", "Commercial"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
@@ -426,7 +436,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Clear Demo / Reset Data Buttons */}
           {isUsingCustomData ? (
             <button 
               onClick={handleResetToDemoData}
@@ -537,7 +546,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 2: NEW! AI VOICE 24/7 CALL RADAR CARD ================= */}
+        {/* ================= CARD 2: AI VOICE 24/7 CALL RADAR CARD ================= */}
         <div 
           onClick={() => setActiveModal("calls")}
           className="md:col-span-5 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
@@ -547,7 +556,7 @@ export default function DashboardPage() {
               <PhoneIncoming className="w-5 h-5 text-emerald-400 animate-bounce" />
               <div>
                 <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">AI 24/7 Voice Answering Radar</h2>
-                <p className="text-xs text-slate-400">Zero Missed Calls • Auto-Booked Jobs</p>
+                <p className="text-xs text-slate-400">Click to listen to AI call recordings & transcript</p>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
@@ -822,7 +831,79 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* ----------------- FULL-SCREEN MAP DISPATCH & SMS CONTROLLER MODAL ----------------- */}
+      {/* ----------------- MODAL 1: AI VOICE 24/7 CALL RECORDING & TRANSCRIPT CONSOLE ----------------- */}
+      {activeModal === "calls" && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[85vh] overflow-y-auto">
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <PhoneIncoming className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">AI 24/7 Voice Call Recordings & Transcripts</h3>
+                <p className="text-xs text-slate-400">Listen to AI receptionist customer calls and direct plumber dispatch</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {callLogs.map((log) => (
+                <div key={log.id} className="bg-[#161928] border border-slate-800 p-5 rounded-2xl hover:border-emerald-500/40 transition">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm text-white">{log.callerName}</h4>
+                        <span className="text-xs text-slate-400">({log.phone})</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">{log.time} • Call Duration: {log.duration}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setPlayingCallId(playingCallId === log.id ? null : log.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${playingCallId === log.id ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"}`}
+                      >
+                        {playingCallId === log.id ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                        <span>{playingCallId === log.id ? "Playing Audio..." : "Play Recording"}</span>
+                      </button>
+
+                      <span className="text-sm font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-xl border border-cyan-500/20">
+                        +${log.estimatedValue} Est.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AI Call Audio Waveform Player Simulation */}
+                  {playingCallId === log.id && (
+                    <div className="bg-[#0D0F19] border border-emerald-500/40 p-3 rounded-xl mb-3 flex items-center gap-3 animate-in fade-in">
+                      <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <div className="flex-1 bg-slate-800/80 h-2 rounded-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full w-2/3 animate-pulse rounded-full" />
+                      </div>
+                      <span className="text-[10px] text-emerald-400 font-mono">0:42 / {log.duration}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <span className="text-xs font-bold text-slate-300 block mb-1">AI Transcript & Call Summary:</span>
+                    <div className="bg-[#0A0C16] border border-slate-800/80 p-3 rounded-xl text-xs text-slate-300 font-mono whitespace-pre-line leading-relaxed">
+                      {log.transcript}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- MODAL 2: FULL-SCREEN MAP DISPATCH MODAL ----------------- */}
       {activeModal === "gps" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-5xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[90vh] overflow-y-auto">
@@ -1145,7 +1226,7 @@ export default function DashboardPage() {
       )}
 
       {/* ----------------- INTERACTIVE DETAIL MODAL ----------------- */}
-      {activeModal && activeModal !== "gps" && (
+      {activeModal && activeModal !== "gps" && activeModal !== "calls" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40 relative max-h-[85vh] overflow-y-auto">
             <button 
