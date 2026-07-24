@@ -897,11 +897,10 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-white">GoHighLevel (GHL) Voice AI Call Recordings & Transcripts</h3>
-                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
-                    Endpoint: /api/ghl/voice-ai
-                  </span>
                 </div>
-                <p className="text-xs text-slate-400">Native GoHighLevel Phone Agent integration with Web Audio API playback</p>
+                <p className="text-xs text-emerald-400 font-mono mt-0.5">
+                  Webhook Target: https://plumbify.net/api/ghl/voice-ai
+                </p>
               </div>
             </div>
 

@@ -4,7 +4,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Extract GHL Voice AI Webhook Payload
     const {
       locationId,
       contactId,
@@ -26,10 +25,10 @@ export async function POST(req: NextRequest) {
       recordingUrl
     });
 
-    // Structure response for GHL Voice AI
     const responsePayload = {
       success: true,
       provider: "GoHighLevel Voice AI Native",
+      endpoint: "https://plumbify.net/api/ghl/voice-ai",
       callId: callId || `ghl_voice_${Date.now()}`,
       contactId: contactId || null,
       message: "GHL Voice AI Call Log & Transcript successfully integrated into Plumbify Dashboard Pipeline",
@@ -50,7 +49,7 @@ export async function GET() {
   return NextResponse.json({
     provider: "GoHighLevel Voice AI Native Agent",
     status: "Active & Listening",
-    endpoint: "/api/ghl/voice-ai",
-    webhookInstructions: "Set your GHL Voice AI Agent's Post-Call Webhook to this URL to auto-sync recordings & transcripts."
+    endpoint: "https://plumbify.net/api/ghl/voice-ai",
+    webhookInstructions: "Set your GHL Voice AI Agent or Workflow Webhook to https://plumbify.net/api/ghl/voice-ai"
   });
 }
