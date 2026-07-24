@@ -33,7 +33,8 @@ import {
   Navigation,
   Compass,
   Send,
-  UserPlus
+  UserPlus,
+  Plus
 } from "lucide-react";
 
 interface CRMContact {
@@ -80,6 +81,7 @@ interface PlumberTech {
   id: string;
   name: string;
   role: string;
+  phone?: string;
   status: "available" | "on-job" | "offline";
   currentLocation: string;
   lat: number;
@@ -90,18 +92,39 @@ interface PlumberTech {
   rating: number;
 }
 
+const DEFAULT_PLUMBERS: PlumberTech[] = [
+  { id: "p1", name: "Ava Vance", role: "Master Plumber", phone: "+1 (555) 234-5678", status: "on-job", currentLocation: "Garland, TX (Near I-30)", lat: 32.9126, lng: -96.6389, jobsCompleted: 42, activeJob: "Main Line Clogged - 1420 Oak St", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", rating: 4.9 },
+  { id: "p2", name: "Madison Reed", role: "HVAC & Leak Specialist", phone: "+1 (555) 876-5432", status: "available", currentLocation: "Plano, TX (Near Legacy)", lat: 33.0198, lng: -96.6989, jobsCompleted: 39, activeJob: "Idle / Standing by", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80", rating: 4.95 },
+  { id: "p3", name: "Daniel Craig", role: "Commercial Specialist", phone: "+1 (555) 345-6789", status: "on-job", currentLocation: "Dallas Downtown", lat: 32.7767, lng: -96.7970, jobsCompleted: 31, activeJob: "Commercial Water Heater Replacement", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80", rating: 4.8 },
+  { id: "p4", name: "Ryan Miller", role: "Sewer Camera Tech", phone: "+1 (555) 901-2345", status: "on-job", currentLocation: "Richardson, TX", lat: 32.9483, lng: -96.7299, jobsCompleted: 28, activeJob: "Emergency Pipe Leak Repair", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80", rating: 4.85 },
+  { id: "p5", name: "Sophia Torres", role: "Residential Plumbing Helper", phone: "+1 (555) 678-9012", status: "available", currentLocation: "Mesquite, TX", lat: 32.7668, lng: -96.5992, jobsCompleted: 24, activeJob: "Idle / Ready for dispatch", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", rating: 4.75 },
+];
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Live Plumber Team State
-  const [plumbers, setPlumbers] = useState<PlumberTech[]>([
-    { id: "p1", name: "Ava Vance", role: "Master Plumber", status: "on-job", currentLocation: "Garland, TX (Near I-30)", lat: 32.9126, lng: -96.6389, jobsCompleted: 42, activeJob: "Main Line Clogged - 1420 Oak St", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", rating: 4.9 },
-    { id: "p2", name: "Madison Reed", role: "HVAC & Leak Specialist", status: "available", currentLocation: "Plano, TX (Near Legacy)", lat: 33.0198, lng: -96.6989, jobsCompleted: 39, activeJob: "Idle / Standing by", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80", rating: 4.95 },
-    { id: "p3", name: "Daniel Craig", role: "Commercial Specialist", status: "on-job", currentLocation: "Dallas Downtown", lat: 32.7767, lng: -96.7970, jobsCompleted: 31, activeJob: "Commercial Water Heater Replacement", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80", rating: 4.8 },
-    { id: "p4", name: "Ryan Miller", role: "Sewer Camera Tech", status: "on-job", currentLocation: "Richardson, TX", lat: 32.9483, lng: -96.7299, jobsCompleted: 28, activeJob: "Emergency Pipe Leak Repair", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80", rating: 4.85 },
-    { id: "p5", name: "Sophia Torres", role: "Residential Plumbing Helper", status: "available", currentLocation: "Mesquite, TX", lat: 32.7668, lng: -96.5992, jobsCompleted: 24, activeJob: "Idle / Ready for dispatch", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", rating: 4.75 },
-  ]);
+  // Live Plumber Team State (with LocalStorage Support)
+  const [plumbers, setPlumbers] = useState<PlumberTech[]>(DEFAULT_PLUMBERS);
+
+  // Add Plumber Form State
+  const [showAddPlumberModal, setShowAddPlumberModal] = useState(false);
+  const [newPlumberName, setNewPlumberName] = useState("");
+  const [newPlumberRole, setNewPlumberRole] = useState("Master Plumber");
+  const [newPlumberPhone, setNewPlumberPhone] = useState("");
+  const [newPlumberLocation, setNewPlumberLocation] = useState("Dallas, TX");
+
+  // Load custom plumbers from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("plumbify_custom_plumbers");
+      if (saved) {
+        setPlumbers(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn("Could not load custom plumbers from storage:", e);
+    }
+  }, []);
 
   // Live Work Orders (To Do / Doing / Done)
   const [workOrders, setWorkOrders] = useState<CRMOpportunity[]>([
@@ -121,14 +144,12 @@ export default function DashboardPage() {
   
   // Interactive Modal State
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [selectedPlumber, setSelectedPlumber] = useState<PlumberTech | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
-  // Fetch real/fallback data from our resilient API endpoints
+  // Fetch real/fallback data from API
   const fetchData = async () => {
     setRefreshing(true);
     try {
-      // 1. Fetch Opportunities
       const oppRes = await fetch("/api/opportunities");
       if (oppRes.ok) {
         const oppData = await oppRes.json();
@@ -146,7 +167,6 @@ export default function DashboardPage() {
         }
       }
 
-      // 2. Fetch Contacts
       const cntRes = await fetch("/api/contacts");
       if (cntRes.ok) {
         const cntData = await cntRes.json();
@@ -155,7 +175,6 @@ export default function DashboardPage() {
         }
       }
 
-      // 3. Fetch Invoices
       const invRes = await fetch("/api/invoices");
       if (invRes.ok) {
         const invData = await invRes.json();
@@ -197,6 +216,40 @@ export default function DashboardPage() {
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
+  // Add New Plumber Form Submit
+  const handleAddPlumberSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlumberName.trim()) return;
+
+    const newPlumber: PlumberTech = {
+      id: `p_custom_${Date.now()}`,
+      name: newPlumberName.trim(),
+      role: newPlumberRole,
+      phone: newPlumberPhone.trim() || "+1 (555) 000-1234",
+      status: "available",
+      currentLocation: newPlumberLocation.trim() || "Dallas, TX",
+      lat: 32.8000 + Math.random() * 0.2,
+      lng: -96.7000 - Math.random() * 0.2,
+      jobsCompleted: 0,
+      activeJob: "Idle / Standing by",
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80`,
+      rating: 5.0
+    };
+
+    const updated = [newPlumber, ...plumbers];
+    setPlumbers(updated);
+    try {
+      localStorage.setItem("plumbify_custom_plumbers", JSON.stringify(updated));
+    } catch (e) {}
+
+    // Reset Form
+    setNewPlumberName("");
+    setNewPlumberPhone("");
+    setShowAddPlumberModal(false);
+    setDispatchSuccessMsg(`🎉 Plumber ${newPlumber.name} registered & GPS tracking activated!`);
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+  };
+
   return (
     <div className="min-h-screen bg-[#090B12] text-slate-100 font-sans p-4 sm:p-6 lg:p-8 select-none">
       {/* ----------------- TOP NAVBAR HEADER ----------------- */}
@@ -214,10 +267,10 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
               <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                5 Plumbers Online (GPS Live)
+                {plumbers.length} Plumbers Registered (GPS Active)
               </span>
               <span className="text-slate-600">•</span>
-              <span className="text-cyan-400 font-medium">GHL Location ID: RHROdkS0TNPBFZHcZsX0</span>
+              <span className="text-cyan-400 font-medium">GHL Location: RHROdkS0TNPBFZHcZsX0</span>
             </div>
           </div>
         </div>
@@ -230,19 +283,28 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Add Plumber Button */}
+          <button 
+            onClick={() => setShowAddPlumberModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/20"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Plumber</span>
+          </button>
+
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
-              placeholder="Search plumber, job address or lead..."
-              className="bg-[#131624] border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/60 transition w-56 sm:w-64 placeholder:text-slate-500"
+              placeholder="Search plumber, address or lead..."
+              className="bg-[#131624] border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/60 transition w-48 sm:w-56 placeholder:text-slate-500"
             />
           </div>
 
           <button 
             onClick={fetchData}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#161926] hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-[#161926] hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition shadow-sm"
           >
             <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-cyan-400" : ""}`} />
             <span>Sync</span>
@@ -320,15 +382,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick Active Work Order Snippets */}
           <div className="bg-[#0D0F18] border border-slate-800/80 rounded-2xl p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-xs">
-                #3
+                #{plumbers.filter(p=>p.status==='on-job').length}
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-200 block">3 Plumbing Technicians Currently On-Job</span>
-                <span className="text-[10px] text-slate-400">Garland • Dallas Downtown • Richardson</span>
+                <span className="text-xs font-bold text-slate-200 block">{plumbers.filter(p=>p.status==='on-job').length} Plumbers Currently Active On-Job</span>
+                <span className="text-[10px] text-slate-400">Garland • Dallas • Plano • Richardson</span>
               </div>
             </div>
             <span className="text-xs text-indigo-400 group-hover:translate-x-1 transition font-semibold flex items-center gap-1">
@@ -352,7 +413,6 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Trapezoid Neon Funnel Visual */}
           <div className="flex flex-col gap-1.5 my-2">
             <div className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg p-2 flex items-center justify-between text-xs font-bold text-white shadow-md">
               <span className="pl-2">Leads</span>
@@ -389,34 +449,26 @@ export default function DashboardPage() {
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-              ● 5 Vehicles Connected
+              ● {plumbers.length} Vehicles Connected
             </span>
           </div>
 
           {/* Dark Cyber Map Visual Container */}
           <div className="h-56 w-full bg-[#0B0D16] border border-slate-800 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
             {/* Map Pin Overlays for Plumbers */}
-            <div className="absolute top-8 left-12 flex items-center gap-2 bg-[#121524]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-500/40 shadow-lg shadow-cyan-500/10">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-              <img src={plumbers[0].avatar} className="w-5 h-5 rounded-full object-cover" />
-              <span className="text-xs font-bold text-slate-200">Ava Vance (Garland)</span>
-            </div>
+            {plumbers.slice(0, 4).map((p, idx) => (
+              <div key={p.id} 
+                style={{ top: `${20 + idx * 22}%`, left: `${15 + idx * 22}%` }}
+                className="absolute flex items-center gap-2 bg-[#121524]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-500/40 shadow-lg shadow-cyan-500/10"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <img src={p.avatar} className="w-5 h-5 rounded-full object-cover" />
+                <span className="text-xs font-bold text-slate-200">{p.name} ({p.currentLocation.split(',')[0]})</span>
+              </div>
+            ))}
 
-            <div className="absolute top-24 right-16 flex items-center gap-2 bg-[#121524]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-emerald-500/40 shadow-lg shadow-emerald-500/10">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <img src={plumbers[1].avatar} className="w-5 h-5 rounded-full object-cover" />
-              <span className="text-xs font-bold text-slate-200">Madison Reed (Plano)</span>
-            </div>
-
-            <div className="absolute bottom-10 left-32 flex items-center gap-2 bg-[#121524]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-indigo-500/40 shadow-lg shadow-indigo-500/10">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
-              <img src={plumbers[2].avatar} className="w-5 h-5 rounded-full object-cover" />
-              <span className="text-xs font-bold text-slate-200">Daniel Craig (Dallas)</span>
-            </div>
-
-            {/* Map Control Overlay Banner */}
             <div className="mt-auto z-10 flex items-center justify-between bg-[#121524]/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
-              <span className="text-xs text-slate-300 font-medium">Auto-Routing Active • Nearest Plumber Response: 11 mins</span>
+              <span className="text-xs text-slate-300 font-medium">Auto-Routing Active • Average Plumber Arrival Time: 11 mins</span>
               <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
                 Open GPS Radar <ArrowRight className="w-3.5 h-3.5" />
               </span>
@@ -424,7 +476,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 4: PLUMBER TEAM ROSTER & DISPATCH STATUS ================= */}
+        {/* ================= CARD 4: PLUMBER TEAM ROSTER & ADD PLUMBER ================= */}
         <div 
           onClick={() => setActiveModal("team")}
           className="md:col-span-4 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
@@ -432,9 +484,15 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">Plumber Roster</h2>
-              <p className="text-xs text-slate-400">Team Status & Smart Dispatch</p>
+              <p className="text-xs text-slate-400">Team Status & Dispatch</p>
             </div>
-            <span className="text-xs font-bold text-slate-400">5 Techs</span>
+            
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowAddPlumberModal(true); }}
+              className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-1 rounded-lg transition"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add
+            </button>
           </div>
 
           <div className="space-y-2.5">
@@ -459,11 +517,103 @@ export default function DashboardPage() {
 
       </main>
 
+      {/* ----------------- MODAL: ADD NEW PLUMBER FORM ----------------- */}
+      {showAddPlumberModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121424] border border-slate-700 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-950/40 relative">
+            <button 
+              onClick={() => setShowAddPlumberModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Register New Plumber / Technician</h3>
+                <p className="text-xs text-slate-400">Add team member for SMS dispatch & GPS tracking</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddPlumberSubmit} className="space-y-4 mt-6">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">Full Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Jason Bourne"
+                  value={newPlumberName}
+                  onChange={(e) => setNewPlumberName(e.target.value)}
+                  className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Specialty / Role</label>
+                  <select 
+                    value={newPlumberRole}
+                    onChange={(e) => setNewPlumberRole(e.target.value)}
+                    className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="Master Plumber">Master Plumber</option>
+                    <option value="HVAC & Leak Specialist">HVAC & Leak Specialist</option>
+                    <option value="Sewer Camera Tech">Sewer Camera Tech</option>
+                    <option value="Commercial Lead">Commercial Lead</option>
+                    <option value="Residential Plumbing Helper">Residential Helper</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Mobile Phone (For SMS)</label>
+                  <input 
+                    type="text" 
+                    placeholder="+1 (555) 000-1234"
+                    value={newPlumberPhone}
+                    onChange={(e) => setNewPlumberPhone(e.target.value)}
+                    className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">GPS Location / Primary City</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Garland, TX"
+                  value={newPlumberLocation}
+                  onChange={(e) => setNewPlumberLocation(e.target.value)}
+                  className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddPlumberModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30"
+                >
+                  Save & Activate GPS
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ----------------- INTERACTIVE DETAIL MODAL ----------------- */}
       {activeModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40 relative max-h-[85vh] overflow-y-auto">
-            {/* Close Button */}
             <button 
               onClick={() => setActiveModal(null)}
               className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
@@ -471,7 +621,7 @@ export default function DashboardPage() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* MODAL 1: WORK ORDER PIPELINE (TO DO / DOING / DONE) */}
+            {/* MODAL 1: WORK ORDER PIPELINE */}
             {activeModal === "workorders" && (
               <div>
                 <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
@@ -499,7 +649,6 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-base font-black text-emerald-400">${job.monetaryValue.toLocaleString()}</span>
                         
-                        {/* Stage Selector */}
                         <select 
                           value={job.stage}
                           onChange={(e) => handleStageChange(job.id, e.target.value as any)}
@@ -519,11 +668,22 @@ export default function DashboardPage() {
             {/* MODAL 2: GPS LIVE MAP & PLUMBERS */}
             {(activeModal === "gps" || activeModal === "team") && (
               <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <Navigation className="w-5 h-5 text-emerald-400" />
-                  GPS Live Plumber Fleet & Dispatch Console
-                </h3>
-                <p className="text-xs text-slate-400 mb-6">Real-time GPS tracking and instant plumber job assignment</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Navigation className="w-5 h-5 text-emerald-400" />
+                      GPS Live Plumber Fleet & Dispatch Console
+                    </h3>
+                    <p className="text-xs text-slate-400">Real-time GPS tracking and instant plumber job assignment</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowAddPlumberModal(true)}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add New Plumber</span>
+                  </button>
+                </div>
 
                 <div className="space-y-4">
                   {plumbers.map((p) => (
@@ -556,30 +716,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-
-            {/* MODAL 3: CONVERSION / REVENUE */}
-            {(activeModal === "funnel" || activeModal === "revenue") && (
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-cyan-400" />
-                  Real GHL Opportunities & Customer Revenue Logs
-                </h3>
-                <p className="text-xs text-slate-400 mb-6">Live sync with GoHighLevel CRM opportunities & billing invoices</p>
-
-                <div className="space-y-3">
-                  {workOrders.map((o) => (
-                    <div key={o.id} className="bg-[#161928] border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between">
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-200">{o.name}</h4>
-                        <p className="text-xs text-slate-400">{o.contact?.name} • {o.contact?.phone}</p>
-                      </div>
-                      <span className="text-sm font-black text-emerald-400">${o.monetaryValue.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
           </div>
         </div>
       )}
