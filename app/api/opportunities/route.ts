@@ -29,9 +29,9 @@ export async function GET() {
       const errText = await res.text();
       console.error("GHL Search Opportunities API Error:", errText);
 
-      // Graceful fallback if GHL PIT token is expired or returns 401 Invalid JWT
-      if (res.status === 401) {
-        console.warn("[Dashboard Warning] GHL Token invalid/expired. Returning graceful opportunities fallback.");
+      // Graceful fallback if GHL PIT token or query returns 401/422
+      if (res.status === 401 || res.status === 422 || !res.ok) {
+        console.warn("[Dashboard Warning] GHL Opportunities API issue (401/422). Returning graceful opportunities fallback.");
         return NextResponse.json({
           success: true,
           isFallback: true,

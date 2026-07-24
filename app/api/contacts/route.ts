@@ -32,8 +32,8 @@ export async function GET(request: Request) {
       const errText = await res.text();
       console.error("GHL Contacts API Error:", errText);
 
-      if (res.status === 401) {
-        console.warn("[Contacts Warning] GHL Token invalid/expired. Returning graceful fallback contacts.");
+      if (res.status === 401 || res.status === 422 || !res.ok) {
+        console.warn("[Contacts Warning] GHL Token or query issue (401/422). Returning graceful fallback contacts.");
         return NextResponse.json({
           success: true,
           isFallback: true,
