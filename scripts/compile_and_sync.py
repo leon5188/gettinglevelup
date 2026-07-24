@@ -397,29 +397,49 @@ def sync_post_to_ghl(metadata, body_html):
         "Content-Type": "application/json"
     }
     
-    # 1. Check if post already exists on GHL
+    # 1. Fetch all posts from GHL using pagination to prevent duplicate page creation
     posts_url = f"{GHL_BASE_URL}/blogs/posts/all"
-    params = {
-        "locationId": GHL_LOCATION_ID,
-        "blogId": GHL_BLOG_ID,
-        "limit": 50,
-        "offset": 0
-    }
+    all_blogs = []
+    limit = 50
+    offset = 0
     
-    post_id = None
-    try:
-        r = requests.get(posts_url, headers=headers, params=params)
-        if r.status_code == 200:
-            posts_data = r.json()
-            for post in posts_data.get("blogs", []):
-                if post.get("urlSlug") == slug:
-                    post_id = post.get("_id")
+    while True:
+        params = {
+            "locationId": GHL_LOCATION_ID,
+            "blogId": GHL_BLOG_ID,
+            "limit": limit,
+            "offset": offset,
+            "status": "PUBLISHED"
+        }
+        try:
+            r = requests.get(posts_url, headers=headers, params=params)
+            if r.status_code == 200:
+                posts_data = r.json()
+                # GHL API returns posts under different keys depending on endpoint
+                blogs_list = posts_data.get("blogs") or posts_data.get("posts") or posts_data.get("blogPosts") or []
+                if not blogs_list:
                     break
-        else:
-            print(f"Failed to fetch posts from GHL: {r.status_code} {r.text}")
-    except Exception as e:
-        print(f"Error checking GHL posts: {e}")
+                all_blogs.extend(blogs_list)
+                if len(blogs_list) < limit:
+                    break
+                offset += limit
+            else:
+                print(f"Failed to fetch posts from GHL: {r.status_code} {r.text}")
+                break
+        except Exception as e:
+            print(f"Error checking GHL posts: {e}")
+            break
         
+    print(f"  Deduplication: fetched {len(all_blogs)} posts from GHL to match against.")
+    post_id = None
+    for post in all_blogs:
+        ghl_slug = post.get("urlSlug", "")
+        ghl_title = post.get("title", "").strip().lower()
+        local_title = title.strip().lower()
+        if ghl_slug == slug or ghl_title == local_title:
+            post_id = post.get("_id")
+            break
+            
     from datetime import datetime
     date_str = metadata.get("date", "")
     published_at = metadata.get("publishedAt", "")
@@ -431,8 +451,8 @@ def sync_post_to_ghl(metadata, body_html):
             dt = datetime.strptime(date_str, "%b %d, %Y")
             if not published_at:
                 published_at = dt.strftime("%Y-%m-%dT12:00:00.000Z")
-            # Compare with current date June 15, 2026
-            if dt > datetime(2026, 6, 15):
+            # Compare with actual current system date to avoid scheduling past posts
+            if dt > datetime.now():
                 is_future = True
         except Exception as e:
             print(f"  Warning: Error parsing date '{date_str}': {e}")
@@ -441,7 +461,7 @@ def sync_post_to_ghl(metadata, body_html):
         published_at = "2026-06-15T12:00:00.000Z"
         
     if not status:
-        status = "SCHEDULED" if is_future else "PUBLISHED"
+        status = "PUBLISHED"
         
     print(f"  Syncing to GHL as {status} (Date: {published_at})...")
     

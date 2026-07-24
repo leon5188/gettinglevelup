@@ -31,6 +31,39 @@ export async function GET(request: Request) {
     if (!res.ok) {
       const errText = await res.text();
       console.error("GHL Contacts API Error:", errText);
+
+      if (res.status === 401) {
+        console.warn("[Contacts Warning] GHL Token invalid/expired. Returning graceful fallback contacts.");
+        return NextResponse.json({
+          success: true,
+          isFallback: true,
+          contacts: [
+            {
+              id: "cnt_demo_101",
+              firstName: "Sam",
+              lastName: "DeAngelis",
+              contactName: "Sam DeAngelis",
+              email: "sam@theplumbinghouse.com",
+              phone: "+15552345678",
+              tags: ["cold-email-pending", "vip-plumber"],
+              dateAdded: new Date().toISOString()
+            },
+            {
+              id: "cnt_demo_102",
+              firstName: "Michael",
+              lastName: "Scott",
+              contactName: "Michael Scott",
+              email: "m.scott@scrantonplumbing.com",
+              phone: "+15559876543",
+              tags: ["inbound-lead"],
+              dateAdded: new Date().toISOString()
+            }
+          ],
+          meta: { total: 2 },
+          warning: "GHL Private Integration Token needs renewal in GoHighLevel Settings -> Private Integrations."
+        });
+      }
+
       return NextResponse.json({ error: "Failed to fetch contacts from GHL", details: errText }, { status: res.status });
     }
 

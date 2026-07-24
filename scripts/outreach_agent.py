@@ -118,7 +118,7 @@ def fetch_webpage_markdown(target_url):
         return ""
 
 # Generate personalized outreach text using Gemini API
-def generate_outreach_content(contact, website_markdown, mode, api_key):
+def generate_outreach_content(contact, website_markdown, mode, api_key, reputation_context=""):
     name = f"{contact.get('firstName', '')} {contact.get('lastName', '')}".strip() or "Business Owner"
     company = contact.get("companyName") or "your company"
     city = contact.get("city") or ""
@@ -127,7 +127,7 @@ def generate_outreach_content(contact, website_markdown, mode, api_key):
     print(f"[*] Generating customized {mode} outreach copy for {company}...")
 
     # Truncate website text to save context window tokens
-    site_text = website_markdown[:10000] if website_markdown else "No website available."
+    site_text = website_markdown[:8000] if website_markdown else ""
 
     prompt = (
         f"You are a highly converting B2B SaaS Sales Development Representative (SDR) representing Plumbify (https://plumbify.net).\n"
@@ -139,19 +139,30 @@ def generate_outreach_content(contact, website_markdown, mode, api_key):
         f"- Contact Person: {name}\n"
         f"- Company Name: {company}\n"
         f"- Business Location: {city}, {state}\n\n"
-        f"Below is the text crawled from their website:\n"
-        f"\"\"\"\n{site_text}\n\"\"\"\n\n"
-        f"Guidelines for {mode}:\n"
     )
+
+    if site_text:
+        prompt += (
+            f"Below is the text crawled from their website:\n"
+            f"\"\"\"\n{site_text}\n\"\"\"\n\n"
+        )
+
+    if reputation_context:
+        prompt += (
+            f"Below are the reputation signals, reviews count, ratings, and founder info discovered for this business:\n"
+            f"\"\"\"\n{reputation_context}\n\"\"\"\n\n"
+        )
+
+    prompt += f"Guidelines for {mode}:\n"
 
     if mode == "email":
         prompt += (
             "- Subject Line: Must be punchy, direct, and mention their company name or city (no clickbait).\n"
             "- Email Body: Must be concise (under 150 words), conversational, friendly, and professional.\n"
-            "- Personalization: Mention a specific detail from their website text (e.g. their services, localized area, or lack of online booking chat widget).\n"
-            "- Call-to-Action: A low-friction ask (e.g., asking if they are open to a quick 10-minute call next week or a 14-day free trial).\n"
+            "- Personalization (CRITICAL): If the reputation context contains details like their Google/Birdeye review count (e.g. 287 reviews), average rating (e.g. 5.0 stars), founder/owner/team names (e.g. Terry Stokes, Tim), or distinct services, you MUST weave these elements naturally into the opening or second sentence. Show them you did deep research. Connect their outstanding local reputation with the critical need to NOT miss phone calls (since high reputation drives high call volume, and missed calls are leaving money on the table).\n"
+            "- Call-to-Action: A low-friction ask (e.g., asking if they are open to a quick 10-minute call next week).\n"
             "- Sign-off: 'Leon, Founder at Plumbify'.\n"
-            "- Do NOT include any intro or markdown tags like ```email or ```html. Output ONLY the raw subject and email body."
+            "- Do NOT include any intro or markdown tags like ```email. Output ONLY the raw subject and email body."
         )
     else: # SMS
         prompt += (
@@ -189,6 +200,134 @@ def generate_outreach_content(contact, website_markdown, mode, api_key):
         print(f"[-] Gemini API text generation failed: {e}", file=sys.stderr)
         return ""
 
+# Fetch notes list for a GHL contact
+def fetch_ghl_contact_notes(contact_id, token):
+    print(f"[*] Fetching notes history for GHL Contact ID: {contact_id}...")
+    url = f"https://services.leadconnectorhq.com/contacts/{contact_id}/notes"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Version": "2021-07-28",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            notes = data.get("notes", [])
+            bodies = [n.get("body", "") for n in notes if n.get("body")]
+            return bodies
+    except Exception as e:
+        print(f"[-] Failed to fetch GHL notes: {e}", file=sys.stderr)
+        return []
+
+# Use Gemini to extract structured contact info from history notes text
+def extract_contact_info_from_notes(notes_bodies, contact, api_key):
+    if not notes_bodies:
+        return {}
+    
+    print("[*] Comparing GHL current profile with notes history to extract corrected details via Gemini...")
+    full_text = "\n---\n".join(notes_bodies)[:10000]
+    
+    current_details = {
+        "firstName": contact.get("firstName", ""),
+        "lastName": contact.get("lastName", ""),
+        "email": contact.get("email", ""),
+        "phone": contact.get("phone", ""),
+        "website": contact.get("website", ""),
+        "address1": contact.get("address1", ""),
+        "city": contact.get("city", ""),
+        "state": contact.get("state", ""),
+        "postalCode": contact.get("postalCode", ""),
+        "companyName": contact.get("companyName", "")
+    }
+    
+    prompt = (
+        "You are an expert CRM data cleaning assistant.\n"
+        "Your task is to analyze a contact's current fields in CRM and compare them with the manual audit reports in their history notes.\n"
+        "The history notes contain the most accurate, manually verified information. You must detect if any current field is missing, placeholder, or incorrect, and provide the correct value.\n\n"
+        "CRITICAL RULES:\n"
+        "1. Look at 'firstName' and 'lastName'. If GHL currently has a business name or generic word like 'The', 'Plumbing', 'ic', 'Rodeo' as the firstName, or 'Plumbing House' as the lastName, these are incorrect placeholders! You MUST overwrite them with the real human contact name found in the notes (e.g., if Notes say 'Contact: Sam DeAngelis', then firstName should be 'Sam' and lastName should be 'DeAngelis').\n"
+        "2. Only provide fields in the output JSON that actually need to be updated (i.e., those that are currently missing, incorrect, or placeholders). If a field in GHL is already correct, do not include it in the JSON.\n"
+        "3. Always extract 'reviews_count', 'rating', and 'founder_name' from the notes if they are present.\n\n"
+        "Here are the CURRENT GHL fields for this contact:\n"
+        f"{json.dumps(current_details, indent=2)}\n\n"
+        "Here are the CRM history notes:\n"
+        f"\"\"\"\n{full_text}\n\"\"\"\n\n"
+        "Analyze the comparison and output a JSON object containing ONLY the corrected fields that need an update. The JSON should follow this schema:\n"
+        "{\n"
+        "  \"firstName\": \"...\",\n"
+        "  \"lastName\": \"...\",\n"
+        "  \"email\": \"...\",\n"
+        "  \"phone\": \"...\",\n"
+        "  \"website\": \"...\",\n"
+        "  \"address1\": \"...\",\n"
+        "  \"city\": \"...\",\n"
+        "  \"state\": \"...\",\n"
+        "  \"postalCode\": \"...\",\n"
+        "  \"companyName\": \"...\",\n"
+        "  \"reviews_count\": \"...\",\n"
+        "  \"rating\": \"...\",\n"
+        "  \"founder_name\": \"...\"\n"
+        "}\n\n"
+        "Output ONLY raw JSON code block. Do not wrap in ```json or include any introductory text."
+    )
+    
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    payload = {
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }]
+    }
+    
+    req = urllib.request.Request(
+        api_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as res:
+            res_data = json.loads(res.read().decode("utf-8"))
+            content = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            content = content.replace("```json", "").replace("```text", "").replace("```", "").strip()
+            extracted = json.loads(content)
+            return extracted
+    except Exception as e:
+        print(f"[-] Gemini notes extraction failed: {e}", file=sys.stderr)
+        return {}
+
+# Search company reputation signals using DuckDuckGo
+def find_company_reputation(company_name, city):
+    if not company_name:
+        return ""
+    query = f"{company_name} {city or ''} reviews yelp birdeye google maps"
+    print(f"[*] Searching reputation signals online for '{company_name}' in '{city or ''}'...")
+    url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote_plus(query)}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+    )
+    try:
+        with urllib.request.urlopen(req) as res:
+            html = res.read().decode("utf-8")
+        snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)<\/a>', html, re.DOTALL)
+        clean_snippets = []
+        for s in snippets:
+            clean = re.sub('<[^<]+?>', '', s).strip()
+            if clean:
+                clean_snippets.append(clean)
+        reputation_text = "\n".join(clean_snippets[:3])
+        return reputation_text
+    except Exception as e:
+        print(f"[-] Reputation search failed: {e}", file=sys.stderr)
+        return ""
+
 # Create a Note inside the Contact profile in GoHighLevel CRM
 def create_ghl_contact_note(contact_id, note_body, token):
     print(f"[*] Posting generated outreach copy as a Note to GHL Contact ID: {contact_id}...")
@@ -217,24 +356,26 @@ def create_ghl_contact_note(contact_id, note_body, token):
         print(f"[-] Failed to post GHL note: {e}", file=sys.stderr)
         return False
 
-# Update Contact Tags in GoHighLevel CRM
-def update_ghl_contact_tags(contact_id, tags, target_mode, token):
-    print(f"[*] Updating contact tags to mark outreach as drafted...")
-    
-    # Remove pending tag and add finalized tag
-    new_tags = [t for t in tags if t not in ["cold-email-pending", "cold-sms-pending"]]
-    new_tags.append("outreach-drafted")
-
+# Single unified update to GHL contact profile (fields, tags, custom fields)
+def update_ghl_contact(contact_id, token, fields_to_update=None, tags=None, custom_fields=None):
+    print(f"[*] Sending update payload to GHL for contact ID: {contact_id}...")
     url = f"https://services.leadconnectorhq.com/contacts/{contact_id}"
-    payload = {
-        "tags": new_tags
-    }
+    
+    payload = {}
+    if fields_to_update:
+        payload.update(fields_to_update)
+    if tags is not None:
+        payload["tags"] = tags
+    if custom_fields is not None:
+        payload["customFields"] = custom_fields
+        
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
         "Version": "2021-07-28",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
+    
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -244,10 +385,10 @@ def update_ghl_contact_tags(contact_id, tags, target_mode, token):
     try:
         with urllib.request.urlopen(req) as res:
             json.loads(res.read().decode("utf-8"))
-            print(f"[+] GHL Tags updated successfully: {new_tags}")
+            print(f"[+] GHL Contact updated successfully.")
             return True
     except Exception as e:
-        print(f"[-] Failed to update GHL tags: {e}", file=sys.stderr)
+        print(f"[-] Failed to update GHL contact: {e}", file=sys.stderr)
         return False
 
 def main():
@@ -263,6 +404,7 @@ def main():
     gemini_key = env_vars.get("GEMINI_API_KEY")
     ghl_token = env_vars.get("GHL_PRIVATE_TOKEN")
     ghl_location = env_vars.get("GHL_LOCATION_ID")
+    custom_field_id = env_vars.get("GHL_CUSTOM_FIELD_ID")
 
     if not gemini_key or not ghl_token or not ghl_location:
         print("[-] Error: Credentials missing from .env.local.", file=sys.stderr)
@@ -300,34 +442,81 @@ def main():
 
         print(f"\n--- Processing Outreach for: {company} (ID: {contact_id}) ---")
 
-        # Step 1: Resolve website URL
+        # Step 1: Fetch GHL contact notes history
+        notes_bodies = fetch_ghl_contact_notes(contact_id, ghl_token)
+        
+        # Step 2: Use Gemini to extract and compare contact details from notes
+        fields_to_update = extract_contact_info_from_notes(notes_bodies, contact, gemini_key)
+        
+        # Extract reputation details (not system properties)
+        reputation_parts = []
+        rev_count = fields_to_update.pop("reviews_count", None)
+        rating = fields_to_update.pop("rating", None)
+        founder = fields_to_update.pop("founder_name", None)
+        
+        if rev_count:
+            reputation_parts.append(f"Review Count: {rev_count}")
+        if rating:
+            reputation_parts.append(f"Rating/Stars: {rating}")
+        if founder:
+            reputation_parts.append(f"Founder/Owner: {founder}")
+
+        # Step 3: Filter non-empty updates, refresh memory contact, and PUT to GHL
+        fields_to_update = {k: v for k, v in fields_to_update.items() if v}
+        if fields_to_update:
+            print(f"[*] AI detected incorrect or missing details in GHL profile. Auto-updating: {fields_to_update}")
+            update_ghl_contact(contact_id, ghl_token, fields_to_update=fields_to_update)
+            # Apply changes to local dictionary so generator uses corrected names
+            for k, v in fields_to_update.items():
+                contact[k] = v
+
+        # Step 4: Resolve reputation context
+        # Fallback to search if note extraction yields no reputation info
+        if not rev_count or not rating:
+            search_rep = find_company_reputation(company, contact.get("city", ""))
+            if search_rep:
+                reputation_parts.append(f"Online Reputation Snippets:\n{search_rep}")
+                
+        reputation_context = "\n".join(reputation_parts)
+
+        # Step 5: Resolve website URL
         website = contact.get("website")
         if not website:
             city = contact.get("city", "")
             website = find_company_website(company, city)
+            if website:
+                update_ghl_contact(contact_id, ghl_token, fields_to_update={"website": website})
+                contact["website"] = website
 
-        # Step 2: Fetch website markdown text
+        # Step 6: Fetch webpage markdown text
         markdown = ""
         if website:
             markdown = fetch_webpage_markdown(website)
         else:
-            print("[-] Website URL could not be resolved. Generating generic outreach...")
+            print("[-] Website URL could not be resolved. Relying on reputation context...")
 
-        # Step 3: Call Gemini AI to write personalized copy
-        outreach_copy = generate_outreach_content(contact, markdown, mode, gemini_key)
+        # Step 7: Call Gemini AI to write highly personalized copy
+        outreach_copy = generate_outreach_content(contact, markdown, mode, gemini_key, reputation_context)
         if not outreach_copy:
             print("[-] Failed to generate outreach copy. Skipping.")
             continue
 
         print(f"[+] Generated Script:\n{outreach_copy}\n")
 
-        # Step 4: Write draft note to GoHighLevel contact profile
+        # Step 8: Write draft note to GoHighLevel contact profile
         note_body = f"--- PLUMBIFY AI OUTREACH DRAFT ({mode.upper()}) ---\n\n{outreach_copy}"
         note_success = create_ghl_contact_note(contact_id, note_body, ghl_token)
 
-        # Step 5: Update tags to prevent double runs
+        # Step 9: Update tags and sync content to custom field
         if note_success:
-            update_ghl_contact_tags(contact_id, current_tags, mode, ghl_token)
+            new_tags = [t for t in current_tags if t not in ["cold-email-pending", "cold-sms-pending"]]
+            new_tags.append("outreach-drafted")
+            
+            custom_fields = None
+            if custom_field_id:
+                custom_fields = [{"id": custom_field_id, "value": outreach_copy}]
+                
+            update_ghl_contact(contact_id, ghl_token, tags=new_tags, custom_fields=custom_fields)
             processed += 1
 
     print(f"\n[+] Outreach processing completed. Drafted scripts for {processed} contacts in GoHighLevel.")
