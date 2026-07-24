@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: "Missing GHL configuration" }, { status: 500 });
     }
 
-    const res = await fetch(`https://services.leadconnectorhq.com/invoices/?locationId=${LOCATION_ID}&limit=50`, {
+    const res = await fetch(`https://services.leadconnectorhq.com/invoices/?altId=${LOCATION_ID}&altType=location&limit=50`, {
       headers: {
         "Authorization": `Bearer ${GHL_API_KEY}`,
         "Version": "2021-07-28",
@@ -24,8 +24,8 @@ export async function GET() {
       const errText = await res.text();
       console.error("GHL Invoices API Error:", errText);
 
-      if (res.status === 401) {
-        console.warn("[Invoices Warning] GHL Token invalid/expired. Returning graceful fallback invoices.");
+      if (res.status === 401 || res.status === 422) {
+        console.warn("[Invoices Warning] GHL Token or parameters issue (401/422). Returning graceful fallback invoices.");
         return NextResponse.json({
           success: true,
           isFallback: true,
