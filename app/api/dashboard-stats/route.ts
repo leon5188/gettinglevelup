@@ -122,7 +122,7 @@ export async function GET() {
     // 2. Fetch GHL Opportunities stats for the plumbing pipeline
     try {
       const oppsRes = await fetch(
-        `https://services.leadconnectorhq.com/opportunities/search?locationId=${LOCATION_ID}&pipelineId=${PIPELINE_ID}&limit=100`,
+        `https://services.leadconnectorhq.com/opportunities/search?location_id=${LOCATION_ID}&pipeline_id=${PIPELINE_ID}&limit=100`,
         {
           headers: {
             "Authorization": `Bearer ${GHL_API_KEY}`,

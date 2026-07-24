@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: "Missing GHL configuration" }, { status: 500 });
     }
 
-    const res = await fetch(`https://services.leadconnectorhq.com/invoices/?altId=${LOCATION_ID}&altType=location&limit=50`, {
+    const res = await fetch(`https://services.leadconnectorhq.com/invoices/?altId=${LOCATION_ID}&altType=location&offset=0&limit=50`, {
       headers: {
         "Authorization": `Bearer ${GHL_API_KEY}`,
         "Version": "2021-07-28",
