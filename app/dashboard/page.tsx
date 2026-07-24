@@ -41,7 +41,11 @@ import {
   Upload,
   FileSpreadsheet,
   Car,
-  Route
+  Route,
+  Trash2,
+  PhoneIncoming,
+  Mic,
+  Play
 } from "lucide-react";
 
 interface CRMContact {
@@ -72,19 +76,6 @@ interface CRMOpportunity {
   };
 }
 
-interface CRMInvoice {
-  id: string;
-  invoiceNumber?: string;
-  title?: string;
-  amount?: number;
-  status?: string;
-  createdAt?: string;
-  contact?: {
-    name?: string;
-    email?: string;
-  };
-}
-
 interface CRMConversation {
   id: string;
   contactName: string;
@@ -93,6 +84,17 @@ interface CRMConversation {
   unread: boolean;
   type: "sms" | "email";
   avatar: string;
+}
+
+interface CallLog {
+  id: string;
+  callerName: string;
+  phone: string;
+  time: string;
+  duration: string;
+  aiSummary: string;
+  estimatedValue: number;
+  status: "AI Booked" | "Live Dispatched" | "Inbound Missed";
 }
 
 interface PlumberTech {
@@ -115,116 +117,54 @@ interface PlumberTech {
   rating: number;
 }
 
-const DEFAULT_PLUMBERS: PlumberTech[] = [
+const DEMO_PLUMBERS: PlumberTech[] = [
   { 
-    id: "p1", 
-    name: "Ava Vance", 
-    role: "Master Plumber", 
-    phone: "+1 (555) 234-5678", 
-    status: "on-job", 
-    currentLocation: "Garland, TX (Near I-30)", 
-    destinationAddress: "1420 Oak St, Garland, TX", 
-    distanceMiles: 3.4, 
-    etaMinutes: 9, 
-    lat: 32.9126, lng: -96.6389, 
-    destLat: 32.9250, destLng: -96.6210, 
-    jobsCompleted: 42, 
-    activeJob: "Main Line Drain Jetting", 
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", 
-    rating: 4.9 
+    id: "p1", name: "Ava Vance", role: "Master Plumber", phone: "+1 (555) 234-5678", status: "on-job", 
+    currentLocation: "Garland, TX (Near I-30)", destinationAddress: "1420 Oak St, Garland, TX", 
+    distanceMiles: 3.4, etaMinutes: 9, lat: 32.9126, lng: -96.6389, destLat: 32.9250, destLng: -96.6210, 
+    jobsCompleted: 42, activeJob: "Main Line Drain Jetting", 
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80", rating: 4.9 
   },
   { 
-    id: "p2", 
-    name: "Madison Reed", 
-    role: "HVAC & Leak Specialist", 
-    phone: "+1 (555) 876-5432", 
-    status: "on-job", 
-    currentLocation: "Plano, TX (Legacy West)", 
-    destinationAddress: "7800 Preston Rd, Plano, TX", 
-    distanceMiles: 5.1, 
-    etaMinutes: 14, 
-    lat: 33.0198, lng: -96.6989, 
-    destLat: 33.0450, destLng: -96.7120, 
-    jobsCompleted: 39, 
-    activeJob: "Tankless Water Heater Check", 
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80", 
-    rating: 4.95 
+    id: "p2", name: "Madison Reed", role: "HVAC & Leak Specialist", phone: "+1 (555) 876-5432", status: "on-job", 
+    currentLocation: "Plano, TX (Legacy West)", destinationAddress: "7800 Preston Rd, Plano, TX", 
+    distanceMiles: 5.1, etaMinutes: 14, lat: 33.0198, lng: -96.6989, destLat: 33.0450, destLng: -96.7120, 
+    jobsCompleted: 39, activeJob: "Tankless Water Heater Check", 
+    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80", rating: 4.95 
   },
   { 
-    id: "p3", 
-    name: "Daniel Craig", 
-    role: "Commercial Specialist", 
-    phone: "+1 (555) 345-6789", 
-    status: "on-job", 
-    currentLocation: "Dallas Downtown", 
-    destinationAddress: "890 Elm St, Dallas, TX", 
-    distanceMiles: 1.8, 
-    etaMinutes: 6, 
-    lat: 32.7767, lng: -96.7970, 
-    destLat: 32.7810, destLng: -96.7910, 
-    jobsCompleted: 31, 
-    activeJob: "Commercial Boiler Repair", 
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80", 
-    rating: 4.8 
-  },
-  { 
-    id: "p4", 
-    name: "Ryan Miller", 
-    role: "Sewer Camera Tech", 
-    phone: "+1 (555) 901-2345", 
-    status: "on-job", 
-    currentLocation: "Richardson, TX", 
-    destinationAddress: "412 Belt Line Rd, Richardson, TX", 
-    distanceMiles: 4.0, 
-    etaMinutes: 11, 
-    lat: 32.9483, lng: -96.7299, 
-    destLat: 32.9600, destLng: -96.7100, 
-    jobsCompleted: 28, 
-    activeJob: "Emergency Pipe Leak Seal", 
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80", 
-    rating: 4.85 
-  },
-  { 
-    id: "p5", 
-    name: "Sophia Torres", 
-    role: "Residential Helper", 
-    phone: "+1 (555) 678-9012", 
-    status: "available", 
-    currentLocation: "Mesquite, TX", 
-    destinationAddress: "2300 Main St, Mesquite, TX", 
-    distanceMiles: 0.8, 
-    etaMinutes: 3, 
-    lat: 32.7668, lng: -96.5992, 
-    destLat: 32.7700, destLng: -96.5900, 
-    jobsCompleted: 24, 
-    activeJob: "Idle / Standing by", 
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", 
-    rating: 4.75 
+    id: "p3", name: "Daniel Craig", role: "Commercial Specialist", phone: "+1 (555) 345-6789", status: "on-job", 
+    currentLocation: "Dallas Downtown", destinationAddress: "890 Elm St, Dallas, TX", 
+    distanceMiles: 1.8, etaMinutes: 6, lat: 32.7767, lng: -96.7970, destLat: 32.7810, destLng: -96.7910, 
+    jobsCompleted: 31, activeJob: "Commercial Boiler Repair", 
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80", rating: 4.8 
   },
 ];
 
-const DEFAULT_CONTACTS: CRMContact[] = [
+const DEMO_CONTACTS: CRMContact[] = [
   { id: "cnt1", contactName: "Sam DeAngelis", email: "sam@theplumbinghouse.com", phone: "+1 (555) 234-5678", tags: ["VIP Client"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
   { id: "cnt2", contactName: "Dallas Commercial Group", email: "facilities@dallasre.com", phone: "+1 (555) 876-5432", tags: ["Commercial"], dateAdded: "2026-07-23", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
-  { id: "cnt3", contactName: "Lisa Kudrow", email: "lisa@planoresidences.com", phone: "+1 (555) 901-2345", tags: ["Residential"], dateAdded: "2026-07-22", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
 ];
 
-const DEFAULT_CONVERSATIONS: CRMConversation[] = [
-  { id: "c1", contactName: "Sam DeAngelis", lastMessage: "I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating...", time: "10m ago", unread: true, type: "sms", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
-  { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32m ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
-  { id: "c3", contactName: "Lisa Kudrow", lastMessage: "Thanks for sending over the tankless water heater estimate.", time: "2h ago", unread: false, type: "sms", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+const DEMO_CALLS: CallLog[] = [
+  { id: "call1", callerName: "Mrs. Sarah Jenkins", phone: "+1 (555) 987-6543", time: "12 mins ago", duration: "1m 45s", aiSummary: "Emergency slab leak under kitchen tile. AI Receptionist booked appointment for 2:00 PM.", estimatedValue: 1450, status: "AI Booked" },
+  { id: "call2", callerName: "Marcus Vance", phone: "+1 (555) 456-7890", time: "45 mins ago", duration: "2m 10s", aiSummary: "Commercial water heater leaking in basement. Dispatched Daniel Craig via SMS.", estimatedValue: 3200, status: "Live Dispatched" },
 ];
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isUsingCustomData, setIsUsingCustomData] = useState(false);
 
-  // Plumber Team & Map Selection State
-  const [plumbers, setPlumbers] = useState<PlumberTech[]>(DEFAULT_PLUMBERS);
-  const [selectedPlumberForRoute, setSelectedPlumberForRoute] = useState<PlumberTech>(DEFAULT_PLUMBERS[0]);
-
-  const [contacts, setContacts] = useState<CRMContact[]>(DEFAULT_CONTACTS);
-  const [conversations, setConversations] = useState<CRMConversation[]>(DEFAULT_CONVERSATIONS);
+  // Plumbers, Contacts, Calls State
+  const [plumbers, setPlumbers] = useState<PlumberTech[]>(DEMO_PLUMBERS);
+  const [selectedPlumberForRoute, setSelectedPlumberForRoute] = useState<PlumberTech>(DEMO_PLUMBERS[0]);
+  const [contacts, setContacts] = useState<CRMContact[]>(DEMO_CONTACTS);
+  const [conversations, setConversations] = useState<CRMConversation[]>([
+    { id: "c1", contactName: "Sam DeAngelis", lastMessage: "I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating...", time: "10m ago", unread: true, type: "sms", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+    { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32m ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+  ]);
+  const [callLogs, setCallLogs] = useState<CallLog[]>(DEMO_CALLS);
 
   // Custom SMS Dispatch Text State
   const [smsDispatchText, setSmsDispatchText] = useState("");
@@ -244,74 +184,85 @@ export default function DashboardPage() {
   const [newContactPhone, setNewContactPhone] = useState("");
   const [newContactTag, setNewContactTag] = useState("Residential");
 
-  // Load custom plumbers & contacts from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedPlumbers = localStorage.getItem("plumbify_custom_plumbers");
-      if (savedPlumbers) setPlumbers(JSON.parse(savedPlumbers));
-
-      const savedContacts = localStorage.getItem("plumbify_custom_contacts");
-      if (savedContacts) setContacts(JSON.parse(savedContacts));
-    } catch (e) {
-      console.warn("Could not load local storage data:", e);
-    }
-  }, []);
-
   // Work Orders (To Do / Doing / Done)
   const [workOrders, setWorkOrders] = useState<CRMOpportunity[]>([
     { id: "wo1", name: "Emergency Pipe Repair - Sam DeAngelis", monetaryValue: 1250, stage: "doing", assignedPlumberId: "p4", assignedPlumberName: "Ryan Miller", address: "412 Belt Line Rd, Garland, TX", contact: { name: "Sam DeAngelis", phone: "+1 (555) 234-5678", email: "sam@theplumbinghouse.com" } },
     { id: "wo2", name: "Commercial Water Heater Replacement", monetaryValue: 3400, stage: "doing", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "890 Elm St, Dallas, TX", contact: { name: "Dallas Commercial Group", phone: "+1 (555) 876-5432", email: "billing@dallasgroup.com" } },
     { id: "wo3", name: "Main Line Drain Jetting & Camera Inspection", monetaryValue: 980, stage: "doing", assignedPlumberId: "p1", assignedPlumberName: "Ava Vance", address: "1420 Oak St, Garland, TX", contact: { name: "Robert Vance", phone: "+1 (555) 345-6789", email: "robert@vancehomes.com" } },
     { id: "wo4", name: "Tankless Water Heater Installation (Pending)", monetaryValue: 2800, stage: "todo", assignedPlumberId: "p2", assignedPlumberName: "Madison Reed", address: "7800 Preston Rd, Plano, TX", contact: { name: "Lisa Kudrow", phone: "+1 (555) 901-2345", email: "lisa@planoresidences.com" } },
-    { id: "wo5", name: "Kitchen Sink Leak & Disposal Upgrade", monetaryValue: 450, stage: "todo", assignedPlumberId: "p5", assignedPlumberName: "Sophia Torres", address: "2300 Main St, Mesquite, TX", contact: { name: "Mark Geller", phone: "+1 (555) 678-9012", email: "mark@gellerdesign.com" } },
+    { id: "wo5", name: "Kitchen Sink Leak & Disposal Upgrade", monetaryValue: 450, stage: "todo", address: "2300 Main St, Mesquite, TX", contact: { name: "Mark Geller", phone: "+1 (555) 678-9012", email: "mark@gellerdesign.com" } },
     { id: "wo6", name: "Whole House Water Filter System Installation", monetaryValue: 1850, stage: "todo", address: "1100 Coit Rd, Richardson, TX", contact: { name: "David Bing", phone: "+1 (555) 789-0123", email: "dbing@techfirm.com" } },
     { id: "wo7", name: "Toilet Replacement & Valve Tune-Up", monetaryValue: 380, stage: "done", assignedPlumberId: "p1", assignedPlumberName: "Ava Vance", address: "550 Apollo Rd, Garland, TX", contact: { name: "Emma Stone", phone: "+1 (555) 890-1234", email: "emma@stoneproperties.com" } },
-    { id: "wo8", name: "Slab Leak Thermal Imaging Inspection", monetaryValue: 1500, stage: "done", assignedPlumberId: "p2", assignedPlumberName: "Madison Reed", address: "3200 Park Blvd, Plano, TX", contact: { name: "Tom Holland", phone: "+1 (555) 901-3456", email: "tom@hollandinc.com" } },
-    { id: "wo9", name: "Gas Line Pressure Test & Leak Seal", monetaryValue: 1100, stage: "done", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "600 Commerce St, Dallas, TX", contact: { name: "Rachel Green", phone: "+1 (555) 012-3456", email: "rachel@ralphlauren.com" } },
   ]);
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
 
-  // Fetch real/fallback data from API
-  const fetchData = async () => {
-    setRefreshing(true);
+  // Load custom plumbers & contacts from localStorage on mount (Auto-hide Demo Data if Customer Has Added Real Plumbers/Contacts)
+  useEffect(() => {
     try {
-      const oppRes = await fetch("/api/opportunities");
-      if (oppRes.ok) {
-        const oppData = await oppRes.json();
-        if (oppData.opportunities && oppData.opportunities.length > 0) {
-          const formatted = oppData.opportunities.map((o: any, idx: number) => ({
-            id: o.id || `opp_${idx}`,
-            name: o.name || "Plumbing Job",
-            monetaryValue: o.monetaryValue || 850,
-            stage: idx % 3 === 0 ? "todo" : idx % 3 === 1 ? "doing" : "done",
-            assignedPlumberName: plumbers[idx % plumbers.length].name,
-            address: o.address || "Garland, TX",
-            contact: o.contact || { name: "Client Lead", phone: "+1 (555) 234-5678" }
-          }));
-          setWorkOrders(formatted);
+      const savedPlumbers = localStorage.getItem("plumbify_custom_plumbers");
+      const savedContacts = localStorage.getItem("plumbify_custom_contacts");
+
+      let hasCustom = false;
+
+      if (savedPlumbers) {
+        const parsedP = JSON.parse(savedPlumbers);
+        if (parsedP.length > 0) {
+          setPlumbers(parsedP);
+          setSelectedPlumberForRoute(parsedP[0]);
+          hasCustom = true;
         }
       }
 
-      const cntRes = await fetch("/api/contacts");
-      if (cntRes.ok) {
-        const cntData = await cntRes.json();
-        if (cntData.contacts && cntData.contacts.length > 0) {
-          setContacts(prev => [...cntData.contacts, ...prev]);
+      if (savedContacts) {
+        const parsedC = JSON.parse(savedContacts);
+        if (parsedC.length > 0) {
+          setContacts(parsedC);
+          hasCustom = true;
         }
       }
-    } catch (err) {
-      console.warn("Using resilient UI fallback state:", err);
+
+      setIsUsingCustomData(hasCustom);
+    } catch (e) {
+      console.warn("Could not load local storage data:", e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
+  }, []);
+
+  // One-click Clear Demo Data / Reset
+  const handleClearDemoData = () => {
+    try {
+      localStorage.removeItem("plumbify_custom_plumbers");
+      localStorage.removeItem("plumbify_custom_contacts");
+    } catch (e) {}
+
+    setPlumbers([]);
+    setContacts([]);
+    setSelectedPlumberForRoute({
+      id: "p_empty", name: "No Plumber Registered", role: "Add your first plumber", phone: "", 
+      status: "available", currentLocation: "Dallas, TX", destinationAddress: "N/A", distanceMiles: 0, 
+      etaMinutes: 0, lat: 32.7767, lng: -96.7970, destLat: 32.7767, destLng: -96.7970, jobsCompleted: 0, avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80", rating: 5.0
+    });
+    setIsUsingCustomData(true);
+    setDispatchSuccessMsg("🧹 All Demo data cleared! You are now in 100% Real Customer Mode.");
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const handleResetToDemoData = () => {
+    try {
+      localStorage.removeItem("plumbify_custom_plumbers");
+      localStorage.removeItem("plumbify_custom_contacts");
+    } catch (e) {}
+
+    setPlumbers(DEMO_PLUMBERS);
+    setSelectedPlumberForRoute(DEMO_PLUMBERS[0]);
+    setContacts(DEMO_CONTACTS);
+    setIsUsingCustomData(false);
+    setDispatchSuccessMsg("🔄 Reset to default Plumbify Demo Dataset.");
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+  };
 
   // Metrics
   const todoJobs = workOrders.filter(w => w.stage === "todo");
@@ -365,9 +316,14 @@ export default function DashboardPage() {
       rating: 5.0
     };
 
-    const updated = [newPlumber, ...plumbers];
+    // If using demo data previously, replace with customer's real plumber
+    const basePlumbers = isUsingCustomData ? plumbers : [];
+    const updated = [newPlumber, ...basePlumbers];
+
     setPlumbers(updated);
     setSelectedPlumberForRoute(newPlumber);
+    setIsUsingCustomData(true);
+
     try {
       localStorage.setItem("plumbify_custom_plumbers", JSON.stringify(updated));
     } catch (e) {}
@@ -375,7 +331,7 @@ export default function DashboardPage() {
     setNewPlumberName("");
     setNewPlumberPhone("");
     setShowAddPlumberModal(false);
-    setDispatchSuccessMsg(`🎉 Plumber ${newPlumber.name} registered & GPS Route Activated!`);
+    setDispatchSuccessMsg(`🎉 Plumber ${newPlumber.name} registered & Demo Data Replaced!`);
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
@@ -394,8 +350,12 @@ export default function DashboardPage() {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
     };
 
-    const updated = [newContact, ...contacts];
+    const baseContacts = isUsingCustomData ? contacts : [];
+    const updated = [newContact, ...baseContacts];
+
     setContacts(updated);
+    setIsUsingCustomData(true);
+
     try {
       localStorage.setItem("plumbify_custom_contacts", JSON.stringify(updated));
     } catch (e) {}
@@ -404,7 +364,7 @@ export default function DashboardPage() {
     setNewContactEmail("");
     setNewContactPhone("");
     setShowAddContactModal(false);
-    setDispatchSuccessMsg(`🎉 Contact ${newContact.contactName} saved to directory!`);
+    setDispatchSuccessMsg(`🎉 Contact ${newContact.contactName} saved & Demo Contacts Cleared!`);
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
@@ -416,14 +376,18 @@ export default function DashboardPage() {
       { id: `cnt_csv_3`, contactName: "Garland Auto Body Shop", email: "service@garlandauto.com", phone: "+1 (555) 776-5566", tags: ["CSV Import", "Industrial"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" }
     ];
 
-    const updated = [...csvContacts, ...contacts];
+    const baseContacts = isUsingCustomData ? contacts : [];
+    const updated = [...csvContacts, ...baseContacts];
+
     setContacts(updated);
+    setIsUsingCustomData(true);
+
     try {
       localStorage.setItem("plumbify_custom_contacts", JSON.stringify(updated));
     } catch (e) {}
 
     setShowImportCsvModal(false);
-    setDispatchSuccessMsg(`📥 Successfully imported 3 customer contacts from CSV!`);
+    setDispatchSuccessMsg(`📥 Imported 3 real customer contacts from CSV! Demo data removed.`);
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
@@ -444,11 +408,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
               <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                {plumbers.length} Plumbers Tracked (GPS & Navigation Live)
+                {plumbers.length} Plumbers Active {isUsingCustomData ? "(Real Mode)" : "(Demo Mode)"}
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-cyan-400 font-medium flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Live Route & ETA Calculator
+                <ShieldCheck className="w-3.5 h-3.5" /> Live Navigation & 24/7 AI Voice Dispatch
               </span>
             </div>
           </div>
@@ -462,30 +426,31 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Clear Demo / Reset Data Buttons */}
+          {isUsingCustomData ? (
+            <button 
+              onClick={handleResetToDemoData}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition"
+            >
+              <RefreshCcw className="w-3 h-3 text-amber-400" />
+              <span>Load Demo Data</span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleClearDemoData}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 rounded-xl text-xs font-semibold transition"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clear Demo Data</span>
+            </button>
+          )}
+
           <button 
             onClick={() => setShowAddPlumberModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/20"
           >
             <Plus className="w-4 h-4" />
             <span>Add Plumber</span>
-          </button>
-
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search plumber, job address or lead..."
-              className="bg-[#131624] border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/60 transition w-48 sm:w-56 placeholder:text-slate-500"
-            />
-          </div>
-
-          <button 
-            onClick={fetchData}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-[#161926] hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition shadow-sm"
-          >
-            <RefreshCcw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-cyan-400" : ""}`} />
-            <span>Sync</span>
           </button>
         </div>
       </header>
@@ -562,7 +527,7 @@ export default function DashboardPage() {
                 #{plumbers.filter(p=>p.status==='on-job').length}
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-200 block">{plumbers.filter(p=>p.status==='on-job').length} Plumbers En Route & Repairing</span>
+                <span className="text-xs font-bold text-slate-200 block">{plumbers.filter(p=>p.status==='on-job').length} Plumbers Active On-Job</span>
                 <span className="text-[10px] text-slate-400">Garland • Dallas • Plano • Richardson</span>
               </div>
             </div>
@@ -572,42 +537,42 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 2: CONVERSION FUNNEL ================= */}
+        {/* ================= CARD 2: NEW! AI VOICE 24/7 CALL RADAR CARD ================= */}
         <div 
-          onClick={() => setActiveModal("funnel")}
-          className="md:col-span-5 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-cyan-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
+          onClick={() => setActiveModal("calls")}
+          className="md:col-span-5 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-100 group-hover:text-cyan-400 transition">Conversion Funnel</h2>
-              <p className="text-xs text-slate-400">Lead $\rightarrow$ Opportunity $\rightarrow$ Deal Velocity</p>
+            <div className="flex items-center gap-2">
+              <PhoneIncoming className="w-5 h-5 text-emerald-400 animate-bounce" />
+              <div>
+                <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">AI 24/7 Voice Answering Radar</h2>
+                <p className="text-xs text-slate-400">Zero Missed Calls • Auto-Booked Jobs</p>
+              </div>
             </div>
-            <span className="text-xs text-cyan-400 font-bold bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
-              37% Conversion
+            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
+              <Mic className="w-3 h-3 text-emerald-400 animate-pulse" /> 100% Answered
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 my-2">
-            <div className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg p-2 flex items-center justify-between text-xs font-bold text-white shadow-md">
-              <span className="pl-2">Leads</span>
-              <span className="pr-2 font-black">5,719</span>
-            </div>
-            <div className="w-[85%] mx-auto bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-lg p-2 flex items-center justify-between text-xs font-bold text-white shadow-md">
-              <span className="pl-2">MQL / Qualified</span>
-              <span className="pr-2 font-black">2,309</span>
-            </div>
-            <div className="w-[70%] mx-auto bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-lg p-1.5 flex items-center justify-between text-xs font-bold text-white shadow-md">
-              <span className="pl-2">Opportunity</span>
-              <span className="pr-2 font-black">768</span>
-            </div>
-            <div className="w-[55%] mx-auto bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg p-1.5 flex items-center justify-between text-xs font-bold text-white shadow-lg shadow-cyan-500/20">
-              <span className="pl-2">Won Deals</span>
-              <span className="pr-2 font-black">354</span>
-            </div>
+          <div className="space-y-3">
+            {callLogs.map((log) => (
+              <div key={log.id} className="bg-[#0F111B] border border-slate-800/80 p-3 rounded-2xl hover:bg-slate-800/40 transition">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span className="text-xs font-bold text-slate-200">{log.callerName}</span>
+                    <span className="text-[10px] text-slate-500">{log.time}</span>
+                  </div>
+                  <span className="text-xs font-black text-cyan-400">+${log.estimatedValue} Est.</span>
+                </div>
+                <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">{log.aiSummary}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* ================= CARD 3: REAL INTERACTIVE MAP WITH DIRECT ROUTE & ETA ================= */}
+        {/* ================= CARD 3: REAL INTERACTIVE MAP WITH ROUTE TRAJECTORY & ETA ================= */}
         <div 
           onClick={() => setActiveModal("gps")}
           className="md:col-span-8 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -655,7 +620,7 @@ export default function DashboardPage() {
               <g transform="translate(680, 120)">
                 <circle r="14" fill="#10b981" fillOpacity="0.2" className="animate-ping" />
                 <circle r="7" fill="#10b981" />
-                <text x="12" y="4" fill="#34d399" fontSize="11" fontWeight="bold">Customer House ({selectedPlumberForRoute.destinationAddress.split(',')[0]})</text>
+                <text x="12" y="4" fill="#34d399" fontSize="11" fontWeight="bold">Customer House ({selectedPlumberForRoute.destinationAddress ? selectedPlumberForRoute.destinationAddress.split(',')[0] : 'Dallas'})</text>
               </g>
 
               <g transform="translate(80, 210)">
@@ -728,26 +693,39 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-2.5">
-            {plumbers.map((p) => (
-              <div 
-                key={p.id} 
-                onClick={(e) => { e.stopPropagation(); setSelectedPlumberForRoute(p); }}
-                className={`border p-2.5 rounded-xl flex items-center justify-between transition cursor-pointer ${selectedPlumberForRoute.id === p.id ? "bg-indigo-950/40 border-indigo-500/60 shadow-lg" : "bg-[#0F111B] border-slate-800/80 hover:bg-slate-800/40"}`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <img src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-700" />
+            {plumbers.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-slate-800 rounded-2xl">
+                <Users className="w-6 h-6 text-slate-500 mx-auto mb-1" />
+                <span className="text-xs text-slate-400 block">No Plumbers Registered Yet</span>
+                <button 
+                  onClick={() => setShowAddPlumberModal(true)}
+                  className="mt-2 text-xs font-bold text-indigo-400 hover:underline"
+                >
+                  + Add Your First Plumber
+                </button>
+              </div>
+            ) : (
+              plumbers.map((p) => (
+                <div 
+                  key={p.id} 
+                  onClick={(e) => { e.stopPropagation(); setSelectedPlumberForRoute(p); }}
+                  className={`border p-2.5 rounded-xl flex items-center justify-between transition cursor-pointer ${selectedPlumberForRoute.id === p.id ? "bg-indigo-950/40 border-indigo-500/60 shadow-lg" : "bg-[#0F111B] border-slate-800/80 hover:bg-slate-800/40"}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <img src={p.avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-700" />
+                    <div>
+                      <span className="text-xs font-bold text-slate-200 block">{p.name}</span>
+                      <span className="text-[10px] text-emerald-400 font-medium">ETA: {p.etaMinutes} mins ({p.distanceMiles} mi)</span>
+                    </div>
+                  </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-200 block">{p.name}</span>
-                    <span className="text-[10px] text-emerald-400 font-medium">ETA: {p.etaMinutes} mins ({p.distanceMiles} mi)</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === "on-job" ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"}`}>
+                      {p.status === "on-job" ? "Active" : "Available"}
+                    </span>
                   </div>
                 </div>
-                <div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === "on-job" ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"}`}>
-                    {p.status === "on-job" ? "Driving / Repairing" : "Available"}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -782,20 +760,27 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-2">
-            {contacts.slice(0, 3).map((cnt) => (
-              <div key={cnt.id} className="bg-[#0F111B] border border-slate-800/80 px-3 py-2 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
-                <div className="flex items-center gap-2.5">
-                  <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-7 h-7 rounded-full object-cover" />
-                  <div>
-                    <span className="text-xs font-bold text-slate-200 block">{cnt.contactName || `${cnt.firstName} ${cnt.lastName}`}</span>
-                    <span className="text-[10px] text-slate-400">{cnt.phone}</span>
-                  </div>
-                </div>
-                <span className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                  {(cnt.tags || ["Customer"])[0]}
-                </span>
+            {contacts.length === 0 ? (
+              <div className="text-center py-4 border border-dashed border-slate-800 rounded-xl">
+                <span className="text-xs text-slate-400 block">No contacts imported yet</span>
+                <span className="text-[10px] text-slate-500">Import CSV or click Add to enroll your customers</span>
               </div>
-            ))}
+            ) : (
+              contacts.slice(0, 3).map((cnt) => (
+                <div key={cnt.id} className="bg-[#0F111B] border border-slate-800/80 px-3 py-2 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
+                  <div className="flex items-center gap-2.5">
+                    <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-7 h-7 rounded-full object-cover" />
+                    <div>
+                      <span className="text-xs font-bold text-slate-200 block">{cnt.contactName || `${cnt.firstName} ${cnt.lastName}`}</span>
+                      <span className="text-[10px] text-slate-400">{cnt.phone}</span>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                    {(cnt.tags || ["Customer"])[0]}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -837,7 +822,7 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* ----------------- FULL-SCREEN REAL MAP DISPATCH & SMS CONTROLLER MODAL ----------------- */}
+      {/* ----------------- FULL-SCREEN MAP DISPATCH & SMS CONTROLLER MODAL ----------------- */}
       {activeModal === "gps" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-5xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[90vh] overflow-y-auto">
@@ -859,7 +844,6 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-6">
-              {/* Left Column: Plumber Selection & Live Status */}
               <div className="md:col-span-5 space-y-3">
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Select Plumber for Live Control</h4>
                 {plumbers.map((p) => (
@@ -884,7 +868,6 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* Right Column: Direct SMS Dispatch Controller */}
               <div className="md:col-span-7 bg-[#161928] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
