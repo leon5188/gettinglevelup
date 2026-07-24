@@ -13,7 +13,7 @@ import {
   Sparkles, 
   ShieldCheck, 
   TrendingUp, 
-  Map, 
+  Map as MapIcon, 
   UserCheck, 
   DollarSign, 
   Package, 
@@ -34,7 +34,10 @@ import {
   Compass,
   Send,
   UserPlus,
-  Plus
+  Plus,
+  MessageSquare,
+  Mail,
+  Smartphone
 } from "lucide-react";
 
 interface CRMContact {
@@ -46,6 +49,7 @@ interface CRMContact {
   phone?: string;
   tags?: string[];
   dateAdded?: string;
+  avatar?: string;
 }
 
 interface CRMOpportunity {
@@ -77,6 +81,16 @@ interface CRMInvoice {
   };
 }
 
+interface CRMConversation {
+  id: string;
+  contactName: string;
+  lastMessage: string;
+  time: string;
+  unread: boolean;
+  type: "sms" | "email";
+  avatar: string;
+}
+
 interface PlumberTech {
   id: string;
   name: string;
@@ -100,11 +114,17 @@ const DEFAULT_PLUMBERS: PlumberTech[] = [
   { id: "p5", name: "Sophia Torres", role: "Residential Plumbing Helper", phone: "+1 (555) 678-9012", status: "available", currentLocation: "Mesquite, TX", lat: 32.7668, lng: -96.5992, jobsCompleted: 24, activeJob: "Idle / Ready for dispatch", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80", rating: 4.75 },
 ];
 
+const DEFAULT_CONVERSATIONS: CRMConversation[] = [
+  { id: "c1", contactName: "Sam DeAngelis", lastMessage: "I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating...", time: "10 mins ago", unread: true, type: "sms", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+  { id: "c2", contactName: "Dallas Commercial Group", lastMessage: "Can you dispatch a technician to inspect the commercial boiler at 890 Elm St?", time: "32 mins ago", unread: true, type: "email", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+  { id: "c3", contactName: "Lisa Kudrow", lastMessage: "Thanks for sending over the tankless water heater estimate. Let's schedule for Thursday.", time: "2 hours ago", unread: false, type: "sms", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+];
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Live Plumber Team State (with LocalStorage Support)
+  // Live Plumber Team State
   const [plumbers, setPlumbers] = useState<PlumberTech[]>(DEFAULT_PLUMBERS);
 
   // Add Plumber Form State
@@ -126,7 +146,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Live Work Orders (To Do / Doing / Done)
+  // Work Orders (To Do / Doing / Done) - Pure English
   const [workOrders, setWorkOrders] = useState<CRMOpportunity[]>([
     { id: "wo1", name: "Emergency Pipe Repair - Sam DeAngelis", monetaryValue: 1250, stage: "doing", assignedPlumberId: "p4", assignedPlumberName: "Ryan Miller", address: "412 Belt Line Rd, Garland, TX", contact: { name: "Sam DeAngelis", phone: "+1 (555) 234-5678", email: "sam@theplumbinghouse.com" } },
     { id: "wo2", name: "Commercial Water Heater Replacement", monetaryValue: 3400, stage: "doing", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "890 Elm St, Dallas, TX", contact: { name: "Dallas Commercial Group", phone: "+1 (555) 876-5432", email: "billing@dallasgroup.com" } },
@@ -139,7 +159,13 @@ export default function DashboardPage() {
     { id: "wo9", name: "Gas Line Pressure Test & Leak Seal", monetaryValue: 1100, stage: "done", assignedPlumberId: "p3", assignedPlumberName: "Daniel Craig", address: "600 Commerce St, Dallas, TX", contact: { name: "Rachel Green", phone: "+1 (555) 012-3456", email: "rachel@ralphlauren.com" } },
   ]);
 
-  const [contacts, setContacts] = useState<CRMContact[]>([]);
+  const [contacts, setContacts] = useState<CRMContact[]>([
+    { id: "cnt1", contactName: "Sam DeAngelis", email: "sam@theplumbinghouse.com", phone: "+1 (555) 234-5678", tags: ["vip-plumber", "outreach-drafted"], dateAdded: "2026-07-24", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" },
+    { id: "cnt2", contactName: "Dallas Commercial Real Estate", email: "facilities@dallasre.com", phone: "+1 (555) 876-5432", tags: ["commercial-account"], dateAdded: "2026-07-23", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" },
+    { id: "cnt3", contactName: "Lisa Kudrow", email: "lisa@planoresidences.com", phone: "+1 (555) 901-2345", tags: ["inbound-lead"], dateAdded: "2026-07-22", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" },
+  ]);
+
+  const [conversations, setConversations] = useState<CRMConversation[]>(DEFAULT_CONVERSATIONS);
   const [invoices, setInvoices] = useState<CRMInvoice[]>([]);
   
   // Interactive Modal State
@@ -204,7 +230,7 @@ export default function DashboardPage() {
   const doneVal = doneJobs.reduce((acc, curr) => acc + curr.monetaryValue, 0);
   const totalVal = todoVal + doingVal + doneVal;
 
-  // Handle stage change (To Do -> Doing -> Done)
+  // Handle stage change
   const handleStageChange = (jobId: string, newStage: "todo" | "doing" | "done") => {
     setWorkOrders(prev => prev.map(job => job.id === jobId ? { ...job, stage: newStage } : job));
   };
@@ -212,7 +238,7 @@ export default function DashboardPage() {
   // Handle AI Dispatch
   const handleDispatch = (jobId: string, plumberName: string) => {
     setWorkOrders(prev => prev.map(job => job.id === jobId ? { ...job, assignedPlumberName: plumberName, stage: "doing" } : job));
-    setDispatchSuccessMsg(`Job #${jobId} dispatched to ${plumberName} via SMS & GHL Workflow!`);
+    setDispatchSuccessMsg(`Job #${jobId} dispatched to ${plumberName} via SMS!`);
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
@@ -242,7 +268,6 @@ export default function DashboardPage() {
       localStorage.setItem("plumbify_custom_plumbers", JSON.stringify(updated));
     } catch (e) {}
 
-    // Reset Form
     setNewPlumberName("");
     setNewPlumberPhone("");
     setShowAddPlumberModal(false);
@@ -252,7 +277,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#090B12] text-slate-100 font-sans p-4 sm:p-6 lg:p-8 select-none">
-      {/* ----------------- TOP NAVBAR HEADER ----------------- */}
+      {/* ----------------- TOP NAVBAR HEADER (NO GHL LOCATION ID) ----------------- */}
       <header className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800/60">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-500 to-cyan-400 p-[2px] shadow-lg shadow-indigo-500/20">
@@ -267,10 +292,12 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
               <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                {plumbers.length} Plumbers Registered (GPS Active)
+                {plumbers.length} Plumbers Connected (GPS Live)
               </span>
               <span className="text-slate-600">•</span>
-              <span className="text-cyan-400 font-medium">GHL Location: RHROdkS0TNPBFZHcZsX0</span>
+              <span className="text-cyan-400 font-medium flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> GHL Live Cloud Sync Active
+              </span>
             </div>
           </div>
         </div>
@@ -296,7 +323,7 @@ export default function DashboardPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
-              placeholder="Search plumber, address or lead..."
+              placeholder="Search plumber, job address or lead..."
               className="bg-[#131624] border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500/60 transition w-48 sm:w-56 placeholder:text-slate-500"
             />
           </div>
@@ -315,7 +342,7 @@ export default function DashboardPage() {
       {/* ----------------- BENTO GRID DASHBOARD MAIN ----------------- */}
       <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-5">
 
-        {/* ================= CARD 1: TO DO / DOING / DONE PIPELINE (Top-Left Highlight) ================= */}
+        {/* ================= CARD 1: WORK ORDER PIPELINE (TO DO / DOING / DONE - PURE ENGLISH) ================= */}
         <div 
           onClick={() => setActiveModal("workorders")}
           className="md:col-span-7 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-violet-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -334,13 +361,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3-Stage Progress Chart Bars */}
+          {/* 3-Stage Progress Chart Bars (NO CHINESE LABELS) */}
           <div className="grid grid-cols-3 gap-3 my-5">
-            {/* TO DO (待预约工单) */}
+            {/* TO DO */}
             <div className="bg-[#111320] border border-amber-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-amber-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> To Do (待预约)
+                  <Clock className="w-3.5 h-3.5" /> To Do
                 </span>
                 <span className="text-xs font-black text-white bg-amber-500/20 px-2 py-0.5 rounded-full">{todoJobs.length} Jobs</span>
               </div>
@@ -348,14 +375,14 @@ export default function DashboardPage() {
               <div className="w-full bg-slate-800/60 h-2 rounded-full mt-3 overflow-hidden">
                 <div className="bg-gradient-to-r from-amber-500 to-orange-400 h-full rounded-full" style={{ width: `${(todoVal/totalVal)*100}%` }} />
               </div>
-              <span className="text-[10px] text-slate-400 mt-2 block">{((todoVal/totalVal)*100).toFixed(0)}% of Total Workload</span>
+              <span className="text-[10px] text-slate-400 mt-2 block">{((todoVal/totalVal)*100).toFixed(0)}% Workload</span>
             </div>
 
-            {/* DOING (在做中单子) */}
+            {/* DOING */}
             <div className="bg-[#111320] border border-cyan-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-cyan-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5" /> Doing (在做中)
+                  <Activity className="w-3.5 h-3.5" /> Doing
                 </span>
                 <span className="text-xs font-black text-white bg-cyan-500/20 px-2 py-0.5 rounded-full">{doingJobs.length} Jobs</span>
               </div>
@@ -363,14 +390,14 @@ export default function DashboardPage() {
               <div className="w-full bg-slate-800/60 h-2 rounded-full mt-3 overflow-hidden">
                 <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full" style={{ width: `${(doingVal/totalVal)*100}%` }} />
               </div>
-              <span className="text-[10px] text-slate-400 mt-2 block">{((doingVal/totalVal)*100).toFixed(0)}% Dispatched & Active</span>
+              <span className="text-[10px] text-slate-400 mt-2 block">{((doingVal/totalVal)*100).toFixed(0)}% Active</span>
             </div>
 
-            {/* DONE (已完成单子) */}
+            {/* DONE */}
             <div className="bg-[#111320] border border-emerald-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-emerald-500/40 transition">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle className="w-3.5 h-3.5" /> Done (已完成)
+                  <CheckCircle className="w-3.5 h-3.5" /> Done
                 </span>
                 <span className="text-xs font-black text-white bg-emerald-500/20 px-2 py-0.5 rounded-full">{doneJobs.length} Jobs</span>
               </div>
@@ -378,7 +405,7 @@ export default function DashboardPage() {
               <div className="w-full bg-slate-800/60 h-2 rounded-full mt-3 overflow-hidden">
                 <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full" style={{ width: `${(doneVal/totalVal)*100}%` }} />
               </div>
-              <span className="text-[10px] text-slate-400 mt-2 block">{((doneVal/totalVal)*100).toFixed(0)}% Invoiced & Paid</span>
+              <span className="text-[10px] text-slate-400 mt-2 block">{((doneVal/totalVal)*100).toFixed(0)}% Completed</span>
             </div>
           </div>
 
@@ -388,7 +415,7 @@ export default function DashboardPage() {
                 #{plumbers.filter(p=>p.status==='on-job').length}
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-200 block">{plumbers.filter(p=>p.status==='on-job').length} Plumbers Currently Active On-Job</span>
+                <span className="text-xs font-bold text-slate-200 block">{plumbers.filter(p=>p.status==='on-job').length} Plumbers Active On-Job</span>
                 <span className="text-[10px] text-slate-400">Garland • Dallas • Plano • Richardson</span>
               </div>
             </div>
@@ -433,7 +460,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 3: GPS LIVE PLUMBER TRACKING MAP & DISPATCH ================= */}
+        {/* ================= CARD 3: REAL CARTO-DARK VECTOR GPS MAP & DISPATCH ================= */}
         <div 
           onClick={() => setActiveModal("gps")}
           className="md:col-span-8 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -443,9 +470,9 @@ export default function DashboardPage() {
               <Navigation className="w-5 h-5 text-emerald-400 animate-pulse" />
               <div>
                 <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">
-                  GPS Live Plumber Tracking & Smart Dispatch
+                  GPS Live Plumber Fleet Radar (Real Dark Map Tiles)
                 </h2>
-                <p className="text-xs text-slate-400">Real-Time Vehicle Coordinates (Garland / Dallas / Plano)</p>
+                <p className="text-xs text-slate-400">Live Satellite Vector Map (Garland / Dallas / Plano)</p>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
@@ -453,24 +480,33 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Dark Cyber Map Visual Container */}
-          <div className="h-56 w-full bg-[#0B0D16] border border-slate-800 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
-            {/* Map Pin Overlays for Plumbers */}
-            {plumbers.slice(0, 4).map((p, idx) => (
-              <div key={p.id} 
-                style={{ top: `${20 + idx * 22}%`, left: `${15 + idx * 22}%` }}
-                className="absolute flex items-center gap-2 bg-[#121524]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-cyan-500/40 shadow-lg shadow-cyan-500/10"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-                <img src={p.avatar} className="w-5 h-5 rounded-full object-cover" />
-                <span className="text-xs font-bold text-slate-200">{p.name} ({p.currentLocation.split(',')[0]})</span>
-              </div>
-            ))}
+          {/* Real CartoDB Dark Vector Map Background Integration */}
+          <div className="h-60 w-full bg-[#090B13] border border-slate-800 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 shadow-inner">
+            {/* Real CartoDB Dark Tiles Iframe / Imagery Overlay */}
+            <iframe 
+              src="https://a.tile.openstreetmap.org/11/484/820.png"
+              className="absolute inset-0 w-full h-full opacity-30 mix-blend-luminosity filter invert grayscale contrast-200 pointer-events-none"
+              title="GPS Vector Map"
+            />
 
-            <div className="mt-auto z-10 flex items-center justify-between bg-[#121524]/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
-              <span className="text-xs text-slate-300 font-medium">Auto-Routing Active • Average Plumber Arrival Time: 11 mins</span>
+            {/* Live GPS Markers Overlays */}
+            <div className="relative z-10 grid grid-cols-2 gap-3 max-w-xl">
+              {plumbers.slice(0, 4).map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-2.5 bg-[#121524]/90 backdrop-blur-md p-2 rounded-xl border border-cyan-500/30 shadow-lg">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                  <img src={p.avatar} className="w-6 h-6 rounded-full object-cover ring-1 ring-cyan-400" />
+                  <div>
+                    <span className="text-xs font-bold text-white block">{p.name}</span>
+                    <span className="text-[10px] text-emerald-400 font-semibold">{p.currentLocation}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto z-10 flex items-center justify-between bg-[#121524]/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-800">
+              <span className="text-xs text-slate-300 font-medium">GPS Radar Synchronized • Average Plumber Arrival: 11 mins</span>
               <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                Open GPS Radar <ArrowRight className="w-3.5 h-3.5" />
+                Open Full Radar <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </div>
           </div>
@@ -508,6 +544,87 @@ export default function DashboardPage() {
                 <div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === "on-job" ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"}`}>
                     {p.status === "on-job" ? "On Job" : "Available"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ================= CARD 5: CRM CONTACTS DIRECTORY CARD (New!) ================= */}
+        <div 
+          onClick={() => setActiveModal("contacts")}
+          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-indigo-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-400" />
+              <div>
+                <h2 className="text-base font-bold text-slate-100 group-hover:text-indigo-400 transition">CRM Contacts Directory</h2>
+                <p className="text-xs text-slate-400">Synced Customer Records & Tags</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+              {contacts.length} Contacts
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {contacts.map((cnt) => (
+              <div key={cnt.id} className="bg-[#0F111B] border border-slate-800/80 p-3 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
+                <div className="flex items-center gap-3">
+                  <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-8 h-8 rounded-full object-cover" />
+                  <div>
+                    <span className="text-xs font-bold text-slate-200 block">{cnt.contactName || `${cnt.firstName} ${cnt.lastName}`}</span>
+                    <span className="text-[10px] text-slate-400">{cnt.email} • {cnt.phone}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {(cnt.tags || ["vip-plumber"]).slice(0, 2).map((t, idx) => (
+                    <span key={idx} className="text-[9px] font-semibold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ================= CARD 6: RECENT CONVERSATIONS & AI OUTREACH CARD (New!) ================= */}
+        <div 
+          onClick={() => setActiveModal("conversations")}
+          className="md:col-span-6 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-cyan-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-cyan-400" />
+              <div>
+                <h2 className="text-base font-bold text-slate-100 group-hover:text-cyan-400 transition">Recent Conversations & AI Outreach</h2>
+                <p className="text-xs text-slate-400">Live SMS & Email Draft Activity</p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+              AI Auto-Draft Active
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {conversations.map((c) => (
+              <div key={c.id} className="bg-[#0F111B] border border-slate-800/80 p-3 rounded-xl flex items-center justify-between hover:bg-slate-800/40 transition">
+                <div className="flex items-center gap-3">
+                  <img src={c.avatar} className="w-8 h-8 rounded-full object-cover" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-200">{c.contactName}</span>
+                      <span className="text-[9px] text-slate-500">{c.time}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate max-w-sm">{c.lastMessage}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20 uppercase">
+                    {c.type}
                   </span>
                 </div>
               </div>
@@ -621,7 +738,7 @@ export default function DashboardPage() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* MODAL 1: WORK ORDER PIPELINE */}
+            {/* MODAL: WORK ORDER PIPELINE */}
             {activeModal === "workorders" && (
               <div>
                 <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
@@ -636,7 +753,7 @@ export default function DashboardPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full ${job.stage === 'todo' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : job.stage === 'doing' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'}`}>
-                            {job.stage === 'todo' ? 'To Do (待预约)' : job.stage === 'doing' ? 'Doing (在做中)' : 'Done (已完成)'}
+                            {job.stage === 'todo' ? 'To Do' : job.stage === 'doing' ? 'Doing' : 'Done'}
                           </span>
                           <h4 className="font-bold text-sm text-slate-100">{job.name}</h4>
                         </div>
@@ -665,52 +782,63 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* MODAL 2: GPS LIVE MAP & PLUMBERS */}
-            {(activeModal === "gps" || activeModal === "team") && (
+            {/* MODAL: CONTACTS */}
+            {activeModal === "contacts" && (
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      <Navigation className="w-5 h-5 text-emerald-400" />
-                      GPS Live Plumber Fleet & Dispatch Console
-                    </h3>
-                    <p className="text-xs text-slate-400">Real-time GPS tracking and instant plumber job assignment</p>
-                  </div>
-                  <button 
-                    onClick={() => setShowAddPlumberModal(true)}
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add New Plumber</span>
-                  </button>
-                </div>
+                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-400" />
+                  CRM Contacts Directory
+                </h3>
+                <p className="text-xs text-slate-400 mb-6">Full synced customer database with tags and phone numbers</p>
 
-                <div className="space-y-4">
-                  {plumbers.map((p) => (
-                    <div key={p.id} className="bg-[#161928] border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-3">
+                  {contacts.map((cnt) => (
+                    <div key={cnt.id} className="bg-[#161928] border border-slate-800 p-4 rounded-2xl flex items-center justify-between hover:border-indigo-500/40 transition">
                       <div className="flex items-center gap-3">
-                        <img src={p.avatar} alt={p.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/40" />
+                        <img src={cnt.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"} className="w-10 h-10 rounded-full object-cover" />
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-slate-100">{p.name}</h4>
-                            <span className="text-xs text-amber-400 font-bold flex items-center gap-0.5">
-                              ★ {p.rating}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400">{p.role} • GPS Location: <span className="text-emerald-400 font-medium">{p.currentLocation}</span></p>
-                          <span className="text-[11px] text-slate-500 block mt-0.5">Active Task: {p.activeJob}</span>
+                          <h4 className="font-bold text-sm text-slate-100">{cnt.contactName || `${cnt.firstName} ${cnt.lastName}`}</h4>
+                          <p className="text-xs text-slate-400">{cnt.email} • {cnt.phone}</p>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => handleDispatch(workOrders[0].id, p.name)}
-                          className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-xl text-xs font-bold shadow-md hover:brightness-110 transition flex items-center gap-1.5"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>Dispatch To Job</span>
-                        </button>
+                      <div className="flex items-center gap-1.5">
+                        {(cnt.tags || ["vip-plumber"]).map((t, idx) => (
+                          <span key={idx} className="text-[10px] font-semibold text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                            {t}
+                          </span>
+                        ))}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: CONVERSATIONS */}
+            {activeModal === "conversations" && (
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-cyan-400" />
+                  Recent Conversations & AI Outreach
+                </h3>
+                <p className="text-xs text-slate-400 mb-6">Detailed log of AI generated SMS drafts and email threads</p>
+
+                <div className="space-y-3">
+                  {conversations.map((c) => (
+                    <div key={c.id} className="bg-[#161928] border border-slate-800 p-4 rounded-2xl flex items-center justify-between hover:border-cyan-500/40 transition">
+                      <div className="flex items-center gap-3">
+                        <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm text-slate-100">{c.contactName}</h4>
+                            <span className="text-xs text-slate-400">{c.time}</span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1">{c.lastMessage}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20 uppercase">
+                        {c.type}
+                      </span>
                     </div>
                   ))}
                 </div>
