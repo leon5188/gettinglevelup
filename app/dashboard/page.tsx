@@ -226,6 +226,9 @@ export default function DashboardPage() {
   const [contacts, setContacts] = useState<CRMContact[]>(DEFAULT_CONTACTS);
   const [conversations, setConversations] = useState<CRMConversation[]>(DEFAULT_CONVERSATIONS);
 
+  // Custom SMS Dispatch Text State
+  const [smsDispatchText, setSmsDispatchText] = useState("");
+
   // Add Plumber Form State
   const [showAddPlumberModal, setShowAddPlumberModal] = useState(false);
   const [newPlumberName, setNewPlumberName] = useState("");
@@ -327,6 +330,13 @@ export default function DashboardPage() {
   const handleDispatch = (jobId: string, plumberName: string) => {
     setWorkOrders(prev => prev.map(job => job.id === jobId ? { ...job, assignedPlumberName: plumberName, stage: "doing" } : job));
     setDispatchSuccessMsg(`Job #${jobId} dispatched to ${plumberName} via SMS! ETA: 11m`);
+    setTimeout(() => setDispatchSuccessMsg(null), 4000);
+  };
+
+  const handleSendSmsToPlumber = () => {
+    if (!smsDispatchText.trim()) return;
+    setDispatchSuccessMsg(`📱 SMS Sent to ${selectedPlumberForRoute.name} (${selectedPlumberForRoute.phone}): "${smsDispatchText}"`);
+    setSmsDispatchText("");
     setTimeout(() => setDispatchSuccessMsg(null), 4000);
   };
 
@@ -438,7 +448,7 @@ export default function DashboardPage() {
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-cyan-400 font-medium flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Live Navigation & Route Calculation Engine
+                <ShieldCheck className="w-3.5 h-3.5" /> Live Route & ETA Calculator
               </span>
             </div>
           </div>
@@ -502,7 +512,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3-Stage Progress Chart Bars */}
           <div className="grid grid-cols-3 gap-3 my-5">
             <div className="bg-[#111320] border border-amber-500/20 rounded-2xl p-4 relative overflow-hidden group/card hover:border-amber-500/40 transition">
               <div className="flex items-center justify-between mb-2">
@@ -598,7 +607,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 3: REAL INTERACTIVE MAP WITH ROUTE TRAJECTORY & ETA ================= */}
+        {/* ================= CARD 3: REAL INTERACTIVE MAP WITH DIRECT ROUTE & ETA ================= */}
         <div 
           onClick={() => setActiveModal("gps")}
           className="md:col-span-8 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group relative overflow-hidden"
@@ -610,17 +619,15 @@ export default function DashboardPage() {
                 <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">
                   Plumber Live Driving Navigation & ETA Trajectory Map
                 </h2>
-                <p className="text-xs text-slate-400">Real-time distance and estimated arrival time to customer's home</p>
+                <p className="text-xs text-slate-400">Click to open full dispatch & SMS controller console</p>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
-              <Car className="w-3.5 h-3.5" /> Live Routing Active
+              <Car className="w-3.5 h-3.5" /> Open Dispatch Console
             </span>
           </div>
 
-          {/* Interactive Navigation Map Container */}
           <div className="h-72 w-full bg-[#060812] border border-slate-800/90 rounded-2xl relative overflow-hidden flex flex-col justify-between p-4 shadow-2xl">
-            {/* Dark Satellite Vector Grid + Animated Driving Trajectory Lines */}
             <svg className="absolute inset-0 w-full h-full stroke-slate-800" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -630,16 +637,12 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
 
-              {/* Grid Lines */}
               <pattern id="navGrid" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
               </pattern>
               <rect width="100%" height="100%" fill="url(#navGrid)" />
 
-              {/* Real Road Contours */}
               <path d="M 50,220 Q 200,60 420,180 T 780,90" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8"/>
-
-              {/* Active Plumber Driving Route Trajectory Line (Dynamic Glow) */}
               <path 
                 d="M 80,210 C 220,90 340,240 680,120" 
                 fill="none" 
@@ -649,14 +652,12 @@ export default function DashboardPage() {
                 className="animate-pulse"
               />
 
-              {/* Customer House Destination Marker */}
               <g transform="translate(680, 120)">
                 <circle r="14" fill="#10b981" fillOpacity="0.2" className="animate-ping" />
                 <circle r="7" fill="#10b981" />
                 <text x="12" y="4" fill="#34d399" fontSize="11" fontWeight="bold">Customer House ({selectedPlumberForRoute.destinationAddress.split(',')[0]})</text>
               </g>
 
-              {/* Plumber Vehicle Origin Pin */}
               <g transform="translate(80, 210)">
                 <circle r="12" fill="#38bdf8" fillOpacity="0.3" className="animate-ping" />
                 <circle r="6" fill="#38bdf8" />
@@ -664,7 +665,6 @@ export default function DashboardPage() {
               </g>
             </svg>
 
-            {/* Top Selection Bar: Click Plumber to View Route */}
             <div className="relative z-10 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
               {plumbers.map((p) => (
                 <button
@@ -678,7 +678,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Bottom Real Route & ETA HUD Info Bar */}
             <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0F1222]/95 backdrop-blur-md p-3.5 rounded-2xl border border-slate-800 gap-3">
               <div className="flex items-center gap-3">
                 <img src={selectedPlumberForRoute.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-emerald-400" />
@@ -695,7 +694,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Distance & ETA Cards */}
               <div className="flex items-center gap-3">
                 <div className="bg-[#16192A] border border-slate-800 px-3 py-1.5 rounded-xl text-center">
                   <span className="text-[10px] text-slate-400 block font-semibold">Distance</span>
@@ -710,7 +708,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================= CARD 4: PLUMBER TEAM ROSTER WITH REAL ETA ================= */}
+        {/* ================= CARD 4: PLUMBER TEAM ROSTER ================= */}
         <div 
           onClick={() => setActiveModal("team")}
           className="md:col-span-4 bg-gradient-to-b from-[#141726] to-[#0F111C] border border-slate-800/80 hover:border-emerald-500/40 rounded-3xl p-6 transition duration-300 shadow-2xl shadow-black/50 cursor-pointer group"
@@ -838,6 +836,99 @@ export default function DashboardPage() {
         </div>
 
       </main>
+
+      {/* ----------------- FULL-SCREEN REAL MAP DISPATCH & SMS CONTROLLER MODAL ----------------- */}
+      {activeModal === "gps" && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-[#111322] border border-slate-700/80 w-full max-w-5xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setActiveModal(null)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <Navigation className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Full-Screen Live Dispatch & Plumber SMS Controller</h3>
+                <p className="text-xs text-slate-400">Directly dispatch plumbers, track routes, and send instant SMS updates</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-6">
+              {/* Left Column: Plumber Selection & Live Status */}
+              <div className="md:col-span-5 space-y-3">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Select Plumber for Live Control</h4>
+                {plumbers.map((p) => (
+                  <div 
+                    key={p.id}
+                    onClick={() => setSelectedPlumberForRoute(p)}
+                    className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between ${selectedPlumberForRoute.id === p.id ? "bg-emerald-950/40 border-emerald-500/60 shadow-lg" : "bg-[#161928] border-slate-800 hover:bg-slate-800/40"}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img src={p.avatar} className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/40" />
+                      <div>
+                        <span className="text-xs font-bold text-white block">{p.name}</span>
+                        <span className="text-[10px] text-slate-400">{p.role}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-xs font-black text-emerald-400 block">{p.etaMinutes} mins</span>
+                      <span className="text-[10px] text-slate-500">{p.distanceMiles} miles away</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Column: Direct SMS Dispatch Controller */}
+              <div className="md:col-span-7 bg-[#161928] border border-slate-800 p-5 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                    <div>
+                      <span className="text-xs font-bold text-white block">Send SMS Dispatch to {selectedPlumberForRoute.name}</span>
+                      <span className="text-[10px] text-slate-400">Mobile: {selectedPlumberForRoute.phone}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                      Destination: {selectedPlumberForRoute.destinationAddress}
+                    </span>
+                  </div>
+
+                  <label className="text-xs font-semibold text-slate-300 block mb-2">Custom Dispatch Instruction or Customer Address Update</label>
+                  <textarea 
+                    rows={4}
+                    placeholder={`e.g. Hi ${selectedPlumberForRoute.name.split(' ')[0]}, please head over to ${selectedPlumberForRoute.destinationAddress} for emergency main drain repair. Customer is waiting on site.`}
+                    value={smsDispatchText}
+                    onChange={(e) => setSmsDispatchText(e.target.value)}
+                    className="w-full bg-[#0A0C16] border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 transition resize-none placeholder:text-slate-600"
+                  />
+                </div>
+
+                <div className="pt-4 flex justify-between items-center">
+                  <button 
+                    onClick={() => handleDispatch(workOrders[0].id, selectedPlumberForRoute.name)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Assign Emergency Job</span>
+                  </button>
+
+                  <button 
+                    onClick={handleSendSmsToPlumber}
+                    className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send SMS Notification</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ----------------- MODAL: ADD CONTACT ----------------- */}
       {showAddContactModal && (
@@ -1071,7 +1162,7 @@ export default function DashboardPage() {
       )}
 
       {/* ----------------- INTERACTIVE DETAIL MODAL ----------------- */}
-      {activeModal && (
+      {activeModal && activeModal !== "gps" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40 relative max-h-[85vh] overflow-y-auto">
             <button 
