@@ -46,7 +46,8 @@ import {
   PhoneIncoming,
   Mic,
   Play,
-  Volume2
+  Volume2,
+  Square
 } from "lucide-react";
 
 interface CRMContact {
@@ -95,6 +96,7 @@ interface CallLog {
   duration: string;
   aiSummary: string;
   transcript: string;
+  speechText: string;
   estimatedValue: number;
   status: "AI Booked" | "Live Dispatched" | "Inbound Missed";
 }
@@ -153,12 +155,14 @@ const DEMO_CALLS: CallLog[] = [
     id: "call1", callerName: "Mrs. Sarah Jenkins", phone: "+1 (555) 987-6543", time: "12 mins ago", duration: "1m 45s", 
     aiSummary: "Emergency slab leak under kitchen tile. AI Receptionist booked appointment for 2:00 PM.", 
     transcript: "Customer: 'Hi, I have water leaking under my kitchen tile and need someone fast!' \nPlumbify AI: 'I understand this is an emergency. I have scheduled Master Plumber Ava Vance to arrive at your home at 2:00 PM today. Sending confirmation SMS now.'",
+    speechText: "Hello Sarah. Plumbify AI receptionist here. I have scheduled Master Plumber Ava Vance to arrive at your home for the kitchen slab leak at 2:00 PM today.",
     estimatedValue: 1450, status: "AI Booked" 
   },
   { 
     id: "call2", callerName: "Marcus Vance", phone: "+1 (555) 456-7890", time: "45 mins ago", duration: "2m 10s", 
     aiSummary: "Commercial water heater leaking in basement. Dispatched Daniel Craig via SMS.", 
     transcript: "Customer: 'Our hotel basement water heater is leaking.' \nPlumbify AI: 'Dispatching Commercial Specialist Daniel Craig immediately to 890 Elm St.'",
+    speechText: "Hello Marcus. Dispatching Commercial Plumbing Specialist Daniel Craig immediately to your basement water heater at 890 Elm Street.",
     estimatedValue: 3200, status: "Live Dispatched" 
   },
 ];
@@ -210,6 +214,51 @@ export default function DashboardPage() {
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [dispatchSuccessMsg, setDispatchSuccessMsg] = useState<string | null>(null);
+
+  // Play Real AI Voice Synthesis Audio using Web Speech API
+  const handleToggleAudioRecording = (call: CallLog) => {
+    if (typeof window === "undefined") return;
+
+    if (playingCallId === call.id) {
+      window.speechSynthesis?.cancel();
+      setPlayingCallId(null);
+      return;
+    }
+
+    // Stop previous speech
+    window.speechSynthesis?.cancel();
+    setPlayingCallId(call.id);
+
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(call.speechText);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.lang = "en-US";
+
+      utterance.onend = () => {
+        setPlayingCallId(null);
+      };
+
+      utterance.onerror = () => {
+        setPlayingCallId(null);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Fallback timer if speech API not supported in rare environment
+      setTimeout(() => {
+        setPlayingCallId(null);
+      }, 5000);
+    }
+  };
+
+  // Stop audio speech when closing modal
+  useEffect(() => {
+    if (!activeModal && typeof window !== "undefined") {
+      window.speechSynthesis?.cancel();
+      setPlayingCallId(null);
+    }
+  }, [activeModal]);
 
   // Load custom plumbers & contacts from localStorage
   useEffect(() => {
@@ -556,7 +605,7 @@ export default function DashboardPage() {
               <PhoneIncoming className="w-5 h-5 text-emerald-400 animate-bounce" />
               <div>
                 <h2 className="text-base font-bold text-slate-100 group-hover:text-emerald-400 transition">AI 24/7 Voice Answering Radar</h2>
-                <p className="text-xs text-slate-400">Click to listen to AI call recordings & transcript</p>
+                <p className="text-xs text-slate-400">Click to listen to real AI voice recording</p>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
@@ -831,7 +880,7 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* ----------------- MODAL 1: AI VOICE 24/7 CALL RECORDING & TRANSCRIPT CONSOLE ----------------- */}
+      {/* ----------------- MODAL 1: AI VOICE 24/7 CALL RECORDING & REAL SPEECH AUDIO ----------------- */}
       {activeModal === "calls" && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-[#111322] border border-slate-700/80 w-full max-w-4xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/40 relative max-h-[85vh] overflow-y-auto">
@@ -844,11 +893,11 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                <PhoneIncoming className="w-5 h-5" />
+                <PhoneIncoming className="w-5 h-5 animate-pulse" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">AI 24/7 Voice Call Recordings & Transcripts</h3>
-                <p className="text-xs text-slate-400">Listen to AI receptionist customer calls and direct plumber dispatch</p>
+                <p className="text-xs text-slate-400">Click Play to hear live Web Audio AI Speech Synthesis</p>
               </div>
             </div>
 
@@ -861,16 +910,16 @@ export default function DashboardPage() {
                         <h4 className="font-bold text-sm text-white">{log.callerName}</h4>
                         <span className="text-xs text-slate-400">({log.phone})</span>
                       </div>
-                      <span className="text-[10px] text-slate-400">{log.time} • Call Duration: {log.duration}</span>
+                      <span className="text-[10px] text-slate-400">{log.time} • Duration: {log.duration}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => setPlayingCallId(playingCallId === log.id ? null : log.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${playingCallId === log.id ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/30" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"}`}
+                        onClick={() => handleToggleAudioRecording(log)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${playingCallId === log.id ? "bg-emerald-500 text-black shadow-lg shadow-emerald-500/40 animate-pulse" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"}`}
                       >
-                        {playingCallId === log.id ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                        <span>{playingCallId === log.id ? "Playing Audio..." : "Play Recording"}</span>
+                        {playingCallId === log.id ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                        <span>{playingCallId === log.id ? "Stop Audio" : "Play Recording"}</span>
                       </button>
 
                       <span className="text-sm font-black text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-xl border border-cyan-500/20">
@@ -879,20 +928,20 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* AI Call Audio Waveform Player Simulation */}
+                  {/* Audio Speech Waveform Indicator */}
                   {playingCallId === log.id && (
-                    <div className="bg-[#0D0F19] border border-emerald-500/40 p-3 rounded-xl mb-3 flex items-center gap-3 animate-in fade-in">
-                      <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-                      <div className="flex-1 bg-slate-800/80 h-2 rounded-full overflow-hidden">
-                        <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full w-2/3 animate-pulse rounded-full" />
+                    <div className="bg-[#0D0F19] border border-emerald-500/50 p-3.5 rounded-xl mb-3 flex items-center gap-3 animate-in fade-in">
+                      <Volume2 className="w-5 h-5 text-emerald-400 animate-bounce" />
+                      <div className="flex-1 bg-slate-800/80 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-500 via-cyan-400 to-indigo-500 h-full w-full animate-pulse rounded-full" />
                       </div>
-                      <span className="text-[10px] text-emerald-400 font-mono">0:42 / {log.duration}</span>
+                      <span className="text-xs text-emerald-400 font-mono font-bold animate-pulse">🔊 Playing Voice Audio...</span>
                     </div>
                   )}
 
                   <div>
                     <span className="text-xs font-bold text-slate-300 block mb-1">AI Transcript & Call Summary:</span>
-                    <div className="bg-[#0A0C16] border border-slate-800/80 p-3 rounded-xl text-xs text-slate-300 font-mono whitespace-pre-line leading-relaxed">
+                    <div className="bg-[#0A0C16] border border-slate-800/80 p-3.5 rounded-xl text-xs text-slate-300 font-mono whitespace-pre-line leading-relaxed">
                       {log.transcript}
                     </div>
                   </div>
