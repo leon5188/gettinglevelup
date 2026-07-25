@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Plumbify AI — Real GoHighLevel Backend Walkthrough</title>
+    <!-- GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #1F2937;
+      }
+
+      /* Entry Composition Root Wrapper */
+      #stage {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #111827;
+        overflow: hidden;
+      }
+
+      /* Real GHL Top Navbar */
+      .ghl-header {
+        height: 60px;
+        background: #1F2937;
+        border-bottom: 1px solid #374151;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        color: #F9FAFB;
+      }
+      .ghl-location-selector {
+        background: #374151;
+        padding: 6px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* GHL Main App Container */
+      .ghl-app-body {
+        position: absolute;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 90px;
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        background: #F3F4F6;
+      }
+
+      /* GHL Real Left Sidebar */
+      .ghl-sidebar {
+        background: #111827;
+        border-right: 1px solid #1F2937;
+        padding: 16px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .ghl-nav-item {
+        padding: 12px 24px;
+        color: #9CA3AF;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+      }
+      .ghl-nav-item.active {
+        background: #1D4ED8;
+        color: #FFFFFF;
+        font-weight: 600;
+      }
+
+      /* GHL Contact View 3-Column Layout */
+      .ghl-contact-workspace {
+        display: grid;
+        grid-template-columns: 340px 1fr 380px;
+        background: #F3F4F6;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /* Left Column: Contact Fields */
+      .ghl-left-panel {
+        background: #FFFFFF;
+        border-right: 1px solid #E5E7EB;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+      }
+      .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid #E5E7EB;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 8px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6B7280;
+      }
+      .tab-btn.active {
+        color: #2563EB;
+        border-bottom: 2px solid #2563EB;
+      }
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .field-label {
+        font-size: 12px;
+        color: #6B7280;
+        font-weight: 500;
+      }
+      .field-value-box {
+        font-size: 14px;
+        color: #111827;
+        font-weight: 600;
+        padding: 6px 0;
+      }
+      .tag-pill {
+        display: inline-block;
+        background: #EFF6FF;
+        color: #1D4ED8;
+        border: 1px solid #BFDBFE;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-right: 6px;
+        margin-bottom: 6px;
+      }
+
+      /* Middle Column: Conversations & Email Preview */
+      .ghl-middle-panel {
+        background: #FFFFFF;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #E5E7EB;
+      }
+      .conv-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #E5E7EB;
+        font-weight: 700;
+        font-size: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .conv-messages-area {
+        flex: 1;
+        padding: 24px;
+        background: #F9FAFB;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .email-card {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+      }
+      .email-subject {
+        font-weight: 700;
+        font-size: 15px;
+        color: #111827;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #F3F4F6;
+        padding-bottom: 8px;
+      }
+      .email-body-text {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #374151;
+        white-space: pre-line;
+      }
+
+      /* Right Column: Real Yellow Notes Panel (From Screenshot!) */
+      .ghl-right-notes-panel {
+        background: #FEF9C3; /* Yellow Note Background */
+        border-left: 1px solid #FEF08A;
+        padding: 24px;
+        overflow-y: auto;
+        font-family: -apple-system, sans-serif;
+      }
+      .notes-header {
+        font-size: 16px;
+        font-weight: 700;
+        color: #854D0E;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #FDE047;
+        padding-bottom: 8px;
+      }
+      .note-content-text {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #713F12;
+      }
+
+      /* Voiceover Subtitle Bar at Bottom */
+      .voiceover-subtitle-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 90px;
+        background: #0F172A;
+        border-top: 3px solid #2563EB;
+        display: flex;
+        align-items: center;
+        padding: 0 40px;
+        z-index: 100;
+        gap: 20px;
+      }
+      .speaker-avatar {
+        width: 44px;
+        height: 44px;
+        background: #2563EB;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #FFFFFF;
+        font-size: 20px;
+      }
+      .subtitle-content {
+        font-size: 22px;
+        font-weight: 600;
+        color: #F8FAFC;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="180"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Real GHL Top Header -->
+      <div class="ghl-header">
+        <div style="display:flex; align-items:center; gap:20px;">
+          <div style="font-weight:800; font-size:20px; color:#38BDF8;">Plumbify AI OS</div>
+          <div class="ghl-location-selector">
+            📍 Location: Plumbify SaaS (IC Plumbing & Drain Services)
+          </div>
+        </div>
+        <div style="display:flex; gap:16px; align-items:center; font-size:14px;">
+          <span>🔍 Quick Search (⌘K)</span>
+          <span style="background:#2563EB; padding:6px 14px; border-radius:6px; font-weight:600;">+ New Contact</span>
+        </div>
+      </div>
+
+      <!-- Real GHL App Main Layout -->
+      <div class="ghl-app-body">
+        <!-- GHL Left Sidebar Navigation -->
+        <div class="ghl-sidebar">
+          <div class="ghl-nav-item">💬 Conversations</div>
+          <div class="ghl-nav-item">📅 Calendars</div>
+          <div class="ghl-nav-item active">👤 Contacts</div>
+          <div class="ghl-nav-item">📊 Opportunities</div>
+          <div class="ghl-nav-item">💳 Payments</div>
+          <div class="ghl-nav-item">⚡ Automation</div>
+          <div class="ghl-nav-item">🌐 Sites</div>
+          <div class="ghl-nav-item">⚙️ Settings</div>
+        </div>
+
+        <!-- GHL 3-Column Contact Details View -->
+        <div class="ghl-contact-workspace">
+          
+          <!-- LEFT COLUMN: GHL Contact Profile Fields -->
+          <div class="ghl-left-panel">
+            <div class="panel-tabs">
+              <div class="tab-btn active">All fields</div>
+              <div class="tab-btn">DND</div>
+              <div class="tab-btn">Actions</div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label">First name</div>
+              <div class="field-value-box" id="field-firstname" style="color:#2563EB; font-weight:700;">Sam</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Last name</div>
+              <div class="field-value-box" id="field-lastname" style="color:#2563EB; font-weight:700;">DeAngelis</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Email ✔️ Verified</div>
+              <div class="field-value-box" style="color:#059669;">sam@theplumbinghouse.com</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Phone</div>
+              <div class="field-value-box">(972) 996-2890</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Company Name</div>
+              <div class="field-value-box">The Plumbing House, LLC</div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Contact Tags</div>
+              <div style="margin-top:4px;" id="tags-container">
+                <span class="tag-pill">hot</span>
+                <span class="tag-pill">email verified</span>
+                <span class="tag-pill" id="tag-pending" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A;">cold-email-pending</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Custom Field: AI Outreach Content</div>
+              <div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:10px; border-radius:6px; font-size:12px; color:#374151;" id="custom-field-box">
+                [Synced with GHL Field ID: GfUG4dQXAh5Up9TjUsQN]
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE COLUMN: GHL Conversations & Outreach Draft -->
+          <div class="ghl-middle-panel">
+            <div class="conv-header">
+              <div>Conversation — The Plumbing House</div>
+              <div style="font-size:13px; color:#059669; font-weight:600;">● Plumbify Agent Active</div>
+            </div>
+            <div class="conv-messages-area">
+              <div style="text-align:center; font-size:12px; color:#6B7280; margin-bottom:8px;">— a thought for your company in Garland, TX —</div>
+              
+              <div class="email-card">
+                <div class="email-subject">Subject: Quick thought for The Plumbing House in Garland, TX</div>
+                <div class="email-body-text" id="email-preview-text">
+Hi Sam,
+
+I was genuinely impressed seeing The Plumbing House's perfect 5.0 rating across 147 customer reviews. It's clear, given your 30+ years of experience and the strong reputation you've built in Garland and the DFW area since founding in 2021, why customers consistently choose you.
+
+My thought is, with so many people actively seeking out your expertise, are you ever worried about missing calls? We often find even top-rated businesses accidentally lose leads who call a competitor in those crucial 30 seconds.
+
+Plumbify is an AI operating system that ensures no lead is left behind. We instantly text back missed calls, pre-qualify customers 24/7, and automatically collect Google reviews.
+
+Would you be open to a quick 10-minute chat next week to see how this fits with The Plumbing House?
+
+Leon, Founder at Plumbify
+                </div>
+              </div>
+
+              <div style="margin-top:auto; background:#FFFFFF; border:1px solid #E5E7EB; border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#6B7280; font-size:13px;">Type a message or trigger GHL automated workflow...</span>
+                <button style="background:#2563EB; color:#FFF; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer;">Send / Workflow Active</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: Real Yellow Notes Panel (1:1 from User Screenshot!) -->
+          <div class="ghl-right-notes-panel">
+            <div class="notes-header">📌 Contact History Notes (Audit Report)</div>
+            <div class="note-content-text">
+<strong>HOUSE</strong><br/>
+• Contact: Sam DeAngelis (Founder & Owner)<br/>
+• Email: sam@theplumbinghouse.com | Phone: (972) 996-2890<br/>
+• Company: The Plumbing House, LLC — 63 Bluffwalk Dr, Garland, TX 75040<br/>
+• Website: http://www.theplumbinghouse.com/<br/>
+• Founded: 2021 | Type: Lead<br/><br/>
+
+<strong>BUSINESS OVERVIEW:</strong><br/>
+- Full-service residential & commercial plumbing company serving Garland, TX and the greater DFW metro (Garland, Sachse, Murphy, Richardson).<br/>
+- Founder Sam DeAngelis brings 30+ years of plumbing experience across Canada, Michigan, and Texas.<br/>
+- Services: plumbing repairs, system installations, leak detection, gas work, water heater emergencies (24/7), toilet repair/replacement.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Voiceover Subtitle Bar at Bottom -->
+      <div class="voiceover-subtitle-bar">
+        <div class="speaker-avatar">🎙️</div>
+        <div class="subtitle-content" id="subtitle-box">
+          Welcome to the official Plumbify AI walkthrough in your GoHighLevel CRM backend!
+        </div>
+      </div>
+
+    </div>
+
+    <!-- GSAP TIMELINE DEFINITION -->
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Dynamic Subtitles tied to timeline
+      const subtitles = [
+        { t: 0.5, text: "Welcome to the official Plumbify AI walkthrough directly inside your GoHighLevel CRM backend!" },
+        { t: 15.0, text: "Chapter 1: Notice how Plumbify parses your contact history Notes in the right yellow panel to extract real founder details." },
+        { t: 45.0, text: "Chapter 2: When you assign the 'cold-email-pending' tag in GHL, Plumbify Agent 2 automatically kicks off." },
+        { t: 75.0, text: "Notice the left panel: Plumbify automatically corrects placeholder names ('The') to real contact names like 'Sam DeAngelis'." },
+        { t: 110.0, text: "Chapter 3: Look at the middle conversation panel — Plumbify drafts a hyper-personalized email referencing their 5.0 rating & 30+ yrs exp!" },
+        { t: 145.0, text: "Chapter 4: The draft syncs directly to GHL custom field ID GfUG4dQXAh5Up9TjUsQN, and tags automatically switch to 'outreach-drafted'!" },
+        { t: 165.0, text: "Your GHL automation is now 100% synchronized and running on autopilot!" }
+      ];
+
+      subtitles.forEach(s => {
+        tl.to("#subtitle-box", {
+          duration: 0.1,
+          onComplete: () => {
+            document.getElementById("subtitle-box").innerText = s.text;
+          }
+        }, s.t);
+      });
+
+      // Animate Tag transition from cold-email-pending to outreach-drafted at 145s
+      tl.to("#tag-pending", {
+        duration: 0.1,
+        onComplete: () => {
+          const el = document.getElementById("tag-pending");
+          el.innerText = "outreach-drafted";
+          el.style.background = "#D1FAE5";
+          el.style.color = "#065F46";
+          el.style.borderColor = "#A7F3D0";
+        }
+      }, 145.0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

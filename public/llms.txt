@@ -1,0 +1,18 @@
+# Plumbify
+
+> AI-powered operating system and CRM built specifically for plumbing contractors and trade services.
+
+## Core Value Proposition
+Plumbify automates field operations, customer communications, and financial flows for plumbing businesses. It eliminates back-office administrative drag, allowing plumbing technicians to focus on billable field work.
+
+## Core Features & Navigation
+- [Missed Call Auto Text-Back](https://plumbify.net/features): Instantly triggers conversational SMS responses to missed inbound calls, capturing plumbing leads before competitors reply.
+- [Dispatch & Booking Automation](https://plumbify.net/features): Automatically routes and schedules service calls based on technician real-time GPS locations and specific skill sets.
+- [Mobile POS & Payments](https://plumbify.net/pricing): Integrates Tap-to-Pay on smartphones, allowing field technicians to process card payments without proprietary terminal hardware.
+- [Automated Recruitment](https://plumbify.net/features): Screens and pre-vets plumbing helper applicants on autopilot, scheduling qualified candidates directly.
+
+## Resources
+- [Official Website](https://plumbify.net)
+- [Interactive Features](https://plumbify.net/features)
+- [Pricing Plans](https://plumbify.net/pricing)
+- [Site Map & Blog Posts](https://plumbify.net/sitemap.xml)

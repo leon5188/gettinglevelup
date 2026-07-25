@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Plumbify AI Walkthrough</title>
+    <!-- GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0B0F19;
+        font-family: "Inter", sans-serif;
+        color: #FFFFFF;
+      }
+
+      /* Entry Composition Root Wrapper */
+      #stage {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #0B0F19;
+        overflow: hidden;
+      }
+
+      /* Background Effects */
+      .bg-glow-1 {
+        position: absolute;
+        width: 800px;
+        height: 800px;
+        top: -200px;
+        left: -100px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(11, 15, 25, 0) 70%);
+      }
+      .bg-glow-2 {
+        position: absolute;
+        width: 900px;
+        height: 900px;
+        bottom: -300px;
+        right: -200px;
+        background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, rgba(11, 15, 25, 0) 70%);
+      }
+      .grid-pattern {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+
+      /* Shared Glassmorphism Container */
+      .glass-card {
+        background: rgba(17, 24, 39, 0.75);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border-radius: 24px;
+      }
+
+      /* SCENE 1: Intro Brand Title */
+      #scene-intro {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        z-index: 10;
+      }
+      .brand-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 20px;
+        border-radius: 9999px;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        color: #60A5FA;
+        font-weight: 600;
+        font-size: 18px;
+        letter-spacing: 1px;
+        margin-bottom: 24px;
+        text-transform: uppercase;
+      }
+      .brand-title {
+        font-size: 96px;
+        font-weight: 900;
+        letter-spacing: -2px;
+        background: linear-gradient(135deg, #FFFFFF 30%, #93C5FD 70%, #3B82F6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.1;
+        margin-bottom: 20px;
+      }
+      .brand-subtitle {
+        font-size: 32px;
+        color: #9CA3AF;
+        font-weight: 400;
+        max-width: 900px;
+      }
+
+      /* SCENE 2: Missed Call Demo (Split View) */
+      #scene-demo-1 {
+        position: absolute;
+        inset: 0;
+        padding: 60px 100px;
+        display: grid;
+        grid-template-columns: 460px 1fr;
+        gap: 60px;
+        align-items: center;
+      }
+      
+      /* Phone Frame */
+      .phone-frame {
+        width: 440px;
+        height: 860px;
+        background: #18181B;
+        border-radius: 48px;
+        border: 4px solid #3F3F46;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+      }
+      .phone-header {
+        text-align: center;
+        font-size: 14px;
+        color: #A1A1AA;
+        margin-bottom: 20px;
+        font-weight: 600;
+      }
+      .missed-call-banner {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      .phone-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .chat-bubble-received {
+        align-self: flex-start;
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #E0F2FE;
+        padding: 16px 20px;
+        border-radius: 20px 20px 20px 4px;
+        font-size: 16px;
+        line-height: 1.5;
+        max-width: 90%;
+      }
+      .chat-bubble-sent {
+        align-self: flex-end;
+        background: #2563EB;
+        color: #FFFFFF;
+        padding: 16px 20px;
+        border-radius: 20px 20px 4px 20px;
+        font-size: 16px;
+        line-height: 1.5;
+        max-width: 90%;
+      }
+
+      /* Dashboard Preview Box */
+      .dashboard-preview {
+        height: 860px;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      .dash-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 20px;
+      }
+      .dash-title {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .dash-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .stat-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 24px;
+      }
+      .stat-label {
+        font-size: 14px;
+        color: #9CA3AF;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .stat-value {
+        font-size: 36px;
+        font-weight: 800;
+        color: #38BDF8;
+      }
+
+      .recovery-log-card {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* SCENE 3: Automated Reviews & AI Booking */
+      #scene-demo-2 {
+        position: absolute;
+        inset: 0;
+        padding: 80px 140px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 60px;
+        align-items: center;
+      }
+      .feature-card-large {
+        padding: 48px;
+        height: 700px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .stars-row {
+        display: flex;
+        gap: 12px;
+        font-size: 48px;
+        color: #FBBF24;
+        margin: 20px 0;
+      }
+      .rating-number {
+        font-size: 72px;
+        font-weight: 900;
+        color: #FFFFFF;
+      }
+
+      /* SCENE 4: CTA Call to Action */
+      #scene-cta {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        z-index: 20;
+      }
+      .cta-box {
+        padding: 80px 100px;
+        max-width: 1200px;
+      }
+      .cta-button {
+        display: inline-block;
+        margin-top: 40px;
+        padding: 24px 60px;
+        font-size: 28px;
+        font-weight: 800;
+        color: #FFFFFF;
+        background: linear-gradient(135deg, #2563EB 0%, #0284C7 100%);
+        border-radius: 9999px;
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.5);
+      }
+
+      .badge-live {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        background: #10B981;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #10B981;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Background Accents -->
+      <div class="bg-glow-1"></div>
+      <div class="bg-glow-2"></div>
+      <div class="grid-pattern"></div>
+
+      <!-- SCENE 1: INTRO BRAND (0s to 4.2s) -->
+      <div id="scene-intro" class="clip" data-start="0" data-duration="4.2" data-track-index="1">
+        <div class="brand-badge" id="intro-badge">
+          <span class="badge-live"></span> Plumbify AI Operating System
+        </div>
+        <h1 class="brand-title" id="intro-title">Never Lose Another Missed Call</h1>
+        <p class="brand-subtitle" id="intro-sub">
+          Automatic Text-Back • 24/7 AI Booking • 5-Star Google Reviews
+        </p>
+      </div>
+
+      <!-- SCENE 2: MISSED CALL DEMO (4.2s to 10.5s) -->
+      <div id="scene-demo-1" class="clip" data-start="4.2" data-duration="6.3" data-track-index="1">
+        <!-- Left: Phone Simulator -->
+        <div class="phone-frame" id="phone-box">
+          <div class="phone-header">Plumbify SMS Assistant</div>
+          <div class="missed-call-banner" id="banner-missed">
+            <span style="font-size:24px;">📞</span>
+            <div>
+              <div style="font-weight:700; color:#F87171; font-size:15px;">MISSED CALL (214-555-0192)</div>
+              <div style="font-size:13px; color:#A1A1AA;">Just now • Customer hanging up</div>
+            </div>
+          </div>
+
+          <div class="phone-chat">
+            <div class="chat-bubble-sent" id="chat-1" style="opacity:0;">
+              Hi! This is Plumbify AI at IC Plumbing. Sorry we missed your call! How can we help you with your plumbing today?
+            </div>
+            <div class="chat-bubble-received" id="chat-2" style="opacity:0;">
+              Hi, I have a leaking water heater! Can someone come check it tomorrow morning?
+            </div>
+            <div class="chat-bubble-sent" id="chat-3" style="opacity:0;">
+              Got it! I’ve scheduled a 9:00 AM inspection for tomorrow. You're all set!
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Dashboard Stats -->
+        <div class="glass-card dashboard-preview" id="dash-box">
+          <div class="dash-header">
+            <div class="dash-title">Live AI Operations Console</div>
+            <div style="color:#10B981; font-weight:600; font-size:16px;">● Status: Active</div>
+          </div>
+
+          <div class="dash-stats-grid">
+            <div class="stat-box">
+              <div class="stat-label">Missed Calls Saved</div>
+              <div class="stat-value" id="stat-calls">142</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Avg Auto-Response</div>
+              <div class="stat-value" style="color:#10B981;">3.2s</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Est. Revenue Captured</div>
+              <div class="stat-value" style="color:#F59E0B;">+$49,700</div>
+            </div>
+          </div>
+
+          <div class="recovery-log-card" id="log-card" style="opacity:0;">
+            <div>
+              <div style="font-weight:700; font-size:20px; color:#10B981;">✓ New Lead Recovered & Booked!</div>
+              <div style="color:#9CA3AF; margin-top:4px;">Customer: Leaking Water Heater • Scheduled for Tomorrow 9:00 AM</div>
+            </div>
+            <div style="font-size:28px; font-weight:800; color:#10B981;">+$350.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 3: AUTOMATED REVIEWS & BOOKING (10.5s to 15.8s) -->
+      <div id="scene-demo-2" class="clip" data-start="10.5" data-duration="5.3" data-track-index="1">
+        <div class="glass-card feature-card-large" id="review-card">
+          <div>
+            <div style="color:#38BDF8; font-weight:700; font-size:18px; text-transform:uppercase; letter-spacing:1px;">Reputation Growth</div>
+            <h2 style="font-size:42px; font-weight:800; margin-top:12px;">Auto Review Collector</h2>
+            <p style="color:#9CA3AF; font-size:20px; margin-top:12px;">Automatically request 5-star Google reviews upon job completion.</p>
+          </div>
+          
+          <div style="text-align:center; padding:40px 0;">
+            <div class="rating-number" id="rating-score">5.0</div>
+            <div class="stars-row" style="justify-content:center;">★★★★★</div>
+            <div style="color:#9CA3AF; font-size:22px;">189 Verified Customer Reviews (+48 this month)</div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.05); padding:20px; border-radius:16px; font-size:16px; color:#E2E8F0;">
+            “Plumbify boosted our Google reviews from 20 to 180+ in 60 days. Our Google Maps calls tripled!”
+          </div>
+        </div>
+
+        <div class="glass-card feature-card-large" id="booking-card">
+          <div>
+            <div style="color:#10B981; font-weight:700; font-size:18px; text-transform:uppercase; letter-spacing:1px;">24/7 Autopilot</div>
+            <h2 style="font-size:42px; font-weight:800; margin-top:12px;">Smart AI Receptionist</h2>
+            <p style="color:#9CA3AF; font-size:20px; margin-top:12px;">Qualify leads and book service jobs directly into your CRM or Google Calendar.</p>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:16px; margin:30px 0;">
+            <div style="background:rgba(59, 130, 246, 0.15); border:1px solid rgba(59, 130, 246, 0.3); padding:20px; border-radius:16px;">
+              <div style="font-weight:700; color:#60A5FA;">📅 Inspection Scheduled</div>
+              <div style="font-size:15px; color:#D1D5DB; margin-top:4px;">Water Leak Repair • Tomorrow @ 2:00 PM</div>
+            </div>
+            <div style="background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.3); padding:20px; border-radius:16px;">
+              <div style="font-weight:700; color:#34D399;">💳 Deposit Captured</div>
+              <div style="font-size:15px; color:#D1D5DB; margin-top:4px;">$50 Service Call Fee Authorized</div>
+            </div>
+          </div>
+
+          <div style="text-align:right; font-weight:700; color:#38BDF8; font-size:20px;">
+            Zero Human Intervention Required →
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 4: CTA FINAL (15.8s to 20.0s) -->
+      <div id="scene-cta" class="clip" data-start="15.8" data-duration="4.2" data-track-index="1">
+        <div class="glass-card cta-box" id="cta-card">
+          <div class="brand-badge">Get Started Free Today</div>
+          <h1 style="font-size:64px; font-weight:900; line-height:1.2;">
+            Turn Missed Calls Into Paying Jobs
+          </h1>
+          <p style="font-size:26px; color:#9CA3AF; margin-top:16px;">
+            Activate Plumbify in under 10 minutes. No credit card required.
+          </p>
+          <div class="cta-button" id="cta-btn">
+            Start 14-Day Free Trial at Plumbify.ai
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GSAP TIMELINE DEFINITION -->
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // SCENE 1: Intro (0s -> 4.2s)
+      tl.from("#intro-badge", { opacity: 0, y: -30, duration: 0.8, ease: "back.out(1.7)" }, 0.2);
+      tl.from("#intro-title", { opacity: 0, scale: 0.9, duration: 1, ease: "power3.out" }, 0.5);
+      tl.from("#intro-sub", { opacity: 0, y: 20, duration: 0.8, ease: "power2.out" }, 0.9);
+
+      // SCENE 2: Demo 1 (4.2s -> 10.5s)
+      tl.from("#phone-box", { x: -100, opacity: 0, duration: 0.8, ease: "power3.out" }, 4.4);
+      tl.from("#dash-box", { x: 100, opacity: 0, duration: 0.8, ease: "power3.out" }, 4.4);
+
+      // Phone Chat Animation using fromTo
+      tl.fromTo("#chat-1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.4)" }, 5.2);
+      tl.fromTo("#chat-2", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.4)" }, 6.2);
+      tl.fromTo("#chat-3", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.4)" }, 7.2);
+      
+      // Dashboard log card pop
+      tl.fromTo("#log-card", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.7)" }, 7.8);
+
+      // SCENE 3: Demo 2 (10.5s -> 15.8s)
+      tl.from("#review-card", { y: 60, opacity: 0, duration: 0.8, ease: "power3.out" }, 10.7);
+      tl.from("#booking-card", { y: 60, opacity: 0, duration: 0.8, ease: "power3.out" }, 10.9);
+
+      // SCENE 4: CTA (15.8s -> 20s)
+      tl.from("#cta-card", { scale: 0.8, opacity: 0, duration: 0.8, ease: "back.out(1.7)" }, 16.0);
+      tl.to("#cta-btn", { scale: 1.05, repeat: 3, yoyo: true, duration: 0.8, ease: "sine.inOut" }, 16.8);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
