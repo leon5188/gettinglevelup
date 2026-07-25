@@ -306,7 +306,7 @@ export default function DemoPage() {
             </Link>
 
             <a 
-              href="https://plumbify.net/api/ghl/voice-ai" 
+              href="/api/ghl/voice-ai" 
               target="_blank"
               rel="noreferrer"
               className="w-full sm:w-auto px-6 py-3.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold rounded-2xl flex items-center justify-center gap-2 transition text-sm"

@@ -1,5 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(req: NextRequest) {
+  return NextResponse.json(
+    {
+      service: "Plumbify GHL Voice AI Webhook API",
+      status: "Active & Production Ready",
+      endpoint: "https://plumbify.net/api/ghl/voice-ai",
+      alternateEndpoint: "https://dashboard.plumbify.net/api/ghl/voice-ai",
+      method: "POST",
+      description: "Post-Call Webhook ingestion for GoHighLevel Voice AI agents to synchronize call logs, transcripts, and estimated revenue directly to Plumbify Dashboard.",
+      expectedPayload: {
+        locationId: "loc_xyz123 (Required for Multi-Tenant Isolation)",
+        contactId: "cnt_abc456",
+        callId: "call_7890",
+        callerName: "Sarah Jenkins",
+        phone: "+1 (555) 234-5678",
+        recordingUrl: "https://storage.gohighlevel.com/recordings/sample.mp3",
+        transcript: "Caller requested emergency main drain jetting...",
+        aiSummary: "Emergency plumbing call for main drain blockage.",
+        estimatedValue: "$1,250",
+        status: "Completed / Booked"
+      }
+    },
+    { status: 200 }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -26,7 +52,6 @@ export async function POST(req: NextRequest) {
       recordingUrl
     });
 
-    // Multi-Tenant Isolation Strategy: Map call log dynamically to the owner's dashboard based on locationId/phone
     const responsePayload = {
       success: true,
       provider: "GoHighLevel Voice AI Native",
@@ -46,14 +71,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    provider: "GoHighLevel Voice AI Native Agent",
-    status: "Active & Listening",
-    endpoint: "https://plumbify.net/api/ghl/voice-ai",
-    multiTenantSupport: "Enabled (Routes calls by GHL Location ID or Registered Business Phone)",
-    webhookInstructions: "Set your GHL Voice AI Agent or Workflow Webhook to https://plumbify.net/api/ghl/voice-ai"
-  });
 }
