@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
-import { autoPublishRedditCommentViaPlaywright } from '@/lib/redditAutomator';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyDYAZr6iYVZ3xbxmMmq4O21Z3ZKBjKu3Js";
-const GHL_TOKEN = process.env.GHL_PRIVATE_TOKEN || "pit-4d90b43a-322a-4695-aec1-057c88485f5c";
-const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID || "RHROdkS0TNPBFZHcZsX0";
+// STRICT ENVIRONMENT VARIABLE ENFORCEMENT (ZERO HARDCODED KEYS)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GHL_TOKEN = process.env.GHL_PRIVATE_TOKEN;
+const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
 // Helper to call Google Gemini REST API
 async function callGeminiAPI(prompt: string, systemInstruction?: string) {
+  if (!GEMINI_API_KEY) {
+    throw new Error("Missing GEMINI_API_KEY environment variable. Please set it in process.env!");
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   try {
     const res = await fetch(url, {
@@ -17,200 +21,125 @@ async function callGeminiAPI(prompt: string, systemInstruction?: string) {
         ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {})
       })
     });
+    
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini API returned status ${res.status}: ${errText}`);
+    }
+
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-  } catch (err) {
-    console.error("Gemini API Error:", err);
-    return null;
+  } catch (err: any) {
+    console.error("Gemini API Error:", err.message);
+    throw err;
   }
 }
 
-// REAL REDDIT USER PROFILE FETCH
+// REAL REDDIT USER PROFILE FETCH (READ-ONLY VIA PUBLIC API)
 async function fetchRealRedditUserProfile(identifier: string) {
   const cleanId = identifier.trim().replace(/^u\//, '');
   const usernameQuery = cleanId.includes('@') ? cleanId.split('@')[0] : cleanId;
 
   const url = `https://www.reddit.com/user/${usernameQuery}/about.json`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      }
-    });
-
-    if (res.status === 403) {
-      return {
-        success: true,
-        username: usernameQuery,
-        totalKarma: "隐私保护中",
-        hasVerifiedEmail: true,
-        isPrivateMode: true,
-        message: `ℹ️ 账号 u/${usernameQuery} 已开启隐私保护模式 (403)，Playwright 真实发帖引擎已就绪！`
-      };
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
     }
+  });
 
-    if (!res.ok) {
-      return {
-        success: false,
-        error: `Reddit 官方 API 响应错误 (Status: ${res.status})，找不到目标用户 u/${usernameQuery}。`
-      };
-    }
-
-    const data = await res.json();
-    if (data && data.data) {
-      const userData = data.data;
-      return {
-        success: true,
-        username: userData.name,
-        commentKarma: userData.comment_karma,
-        linkKarma: userData.link_karma,
-        totalKarma: userData.total_karma || (userData.comment_karma + userData.link_karma),
-        hasVerifiedEmail: userData.has_verified_email || false,
-        iconImg: userData.icon_img ? userData.icon_img.split('?')[0] : null,
-        message: `✅ 真实连通 Reddit 官方 API，已验证 u/${userData.name}！`
-      };
-    }
-
+  if (res.status === 403) {
     return {
-      success: false,
-      error: `无法解析 Reddit 用户 u/${usernameQuery} 的真实 API 数据。`
-    };
-  } catch (e: any) {
-    return {
-      success: false,
-      error: `网络连接异常: ${e.message}`
+      success: true,
+      username: usernameQuery,
+      isPrivateMode: true,
+      message: `u/${usernameQuery} 用户主页处于隐私状态 (HTTP 403)。`
     };
   }
+
+  if (!res.ok) {
+    throw new Error(`Reddit API 响应错误 (HTTP Status: ${res.status})，找不到目标用户 u/${usernameQuery}。`);
+  }
+
+  const data = await res.json();
+  if (data && data.data) {
+    const userData = data.data;
+    return {
+      success: true,
+      username: userData.name,
+      commentKarma: userData.comment_karma,
+      linkKarma: userData.link_karma,
+      totalKarma: userData.total_karma || (userData.comment_karma + userData.link_karma),
+      hasVerifiedEmail: userData.has_verified_email || false,
+      message: `✅ 已成功查验 Reddit 官方用户 u/${userData.name} 的公开 Profile。`
+    };
+  }
+
+  throw new Error(`无法解析 Reddit 用户 u/${usernameQuery} 的 API 返回数据。`);
 }
 
 // Helper to scrape web page
 async function scrapeWebpageText(targetUrl: string) {
-  try {
-    const res = await fetch(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      }
-    });
-    const html = await res.text();
-    return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-               .replace(/<[^>]+>/g, ' ')
-               .replace(/\s+/g, ' ')
-               .trim().slice(0, 4000);
-  } catch (e) {
-    return null;
+  const res = await fetch(targetUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    }
+  });
+  if (!res.ok) {
+    throw new Error(`无法抓取目标网页 ${targetUrl} (Status: ${res.status})`);
   }
+  const html = await res.text();
+  return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+             .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+             .replace(/<[^>]+>/g, ' ')
+             .replace(/\s+/g, ' ')
+             .trim().slice(0, 4000);
 }
 
-// MULTI-SUBREDDIT 100% VERIFIED LIVE NON-DELETED REAL POST POOL
-const COMPREHENSIVE_LIVE_POSTS_POOL: Record<string, any[]> = {
-  'r/plumbing': [
-    {
-      id: 'plumb-live-1',
-      name: 't3_1vcfcyb',
-      subreddit: 'r/plumbing',
-      title: 'Pipe glowing boiler - concern?',
-      author: 'u/HomeBoilerUser',
-      upvotes: 240,
-      comments: 65,
-      snippet: 'My boiler pipe seems extremely hot and glowing near the valve fitting. Is this an immediate shutdown emergency?',
-      permalink: 'https://www.reddit.com/r/Plumbing/comments/1vcfcyb/pipe_glowing_boiler_concern/'
-    },
-    {
-      id: 'plumb-live-2',
-      name: 't3_16doa2v',
-      subreddit: 'r/plumbing',
-      title: 'Common mistakes master plumbers see homeowners make with main shutoff valves',
-      author: 'u/MasterTradePlumber',
-      upvotes: 890,
-      comments: 142,
-      snippet: 'Turning old gate valves too fast often snaps the internal stem. Always turn quarter-turn ball valves slowly.',
-      permalink: 'https://www.reddit.com/r/Plumbing/comments/16doa2v/read_the_rules_before_posting_or_commenting/'
-    }
-  ],
-  'r/HVAC': [
-    {
-      id: 'hvac-live-1',
-      name: 't3_1ls9go8',
-      subreddit: 'r/HVAC',
-      title: 'AC troubleshooting cheatsheet for residential trade contractors',
-      author: 'u/HVAC_Tech_Pro',
-      upvotes: 1420,
-      comments: 210,
-      snippet: 'Capacitor failures account for 60% of summer no-cool service calls. Always test microfarads under load.',
-      permalink: 'https://www.reddit.com/r/HVAC/comments/1ls9go8/ac_troubleshooting_cheatsheet/'
-    }
-  ]
-};
-
+// 100% REAL LIVE REDDIT HOT POSTS FETCH (ZERO FAKE FALLBACK DATA)
 async function fetchRealRedditPosts(subreddit: string) {
   const cleanSub = subreddit.replace(/^r\//, '').trim();
-  const url = `https://www.reddit.com/r/${cleanSub}/hot.json?limit=10`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      }
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.data && data.data.children && data.data.children.length > 0) {
-        const parsed = data.data.children
-          .filter((item: any) => item.data && item.data.permalink && item.data.author !== '[deleted]')
-          .map((item: any) => {
-            const rawPermalink = item.data.permalink;
-            const cleanPath = rawPermalink.replace(/&amp;/g, '&');
-            return {
-              id: item.data.id,
-              name: item.data.name,
-              subreddit: `r/${item.data.subreddit}`,
-              title: item.data.title,
-              author: `u/${item.data.author}`,
-              upvotes: item.data.ups,
-              comments: item.data.num_comments,
-              snippet: item.data.selftext ? item.data.selftext.slice(0, 200) : item.data.title,
-              permalink: `https://www.reddit.com${cleanPath}`
-            };
-          });
-
-        if (parsed.length > 0) return parsed;
-      }
+  const url = `https://www.reddit.com/r/${cleanSub}/hot.json?limit=15`;
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
     }
-  } catch (e) {
-    console.error("Real Reddit fetch posts error:", e);
+  });
+  
+  if (!res.ok) {
+    throw new Error(`Reddit API 在线拉取 r/${cleanSub} 失败 (HTTP ${res.status})，可能是 Cloudflare IP 限制，请重试或检查网络通道。`);
   }
 
-  const key = `r/${cleanSub}`;
-  if (COMPREHENSIVE_LIVE_POSTS_POOL[key]) {
-    return COMPREHENSIVE_LIVE_POSTS_POOL[key];
+  const data = await res.json();
+  if (!data || !data.data || !data.data.children || data.data.children.length === 0) {
+    throw new Error(`未能在 r/${cleanSub} 中扫描到有效文章。`);
   }
-  return Object.values(COMPREHENSIVE_LIVE_POSTS_POOL).flat();
+
+  const parsed = data.data.children
+    .filter((item: any) => item.data && item.data.permalink && item.data.author !== '[deleted]' && item.data.selftext !== '[deleted]')
+    .map((item: any) => {
+      const rawPermalink = item.data.permalink;
+      const cleanPath = rawPermalink.replace(/&amp;/g, '&');
+      return {
+        id: item.data.id,
+        name: item.data.name,
+        subreddit: `r/${item.data.subreddit}`,
+        title: item.data.title,
+        author: `u/${item.data.author}`,
+        upvotes: item.data.ups,
+        comments: item.data.num_comments,
+        snippet: item.data.selftext ? item.data.selftext.slice(0, 200) : item.data.title,
+        permalink: `https://www.reddit.com${cleanPath}`
+      };
+    });
+
+  if (parsed.length === 0) {
+    throw new Error(`r/${cleanSub} 中当前所有热门帖子均为已删除状态。`);
+  }
+
+  return parsed;
 }
 
-// Helper to fetch live Reddit rules
-async function fetchRealRedditRules(subreddit: string) {
-  try {
-    const cleanSub = subreddit.replace(/^r\//, '');
-    const url = `https://www.reddit.com/r/${cleanSub}/about/rules.json`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-      }
-    });
-    
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.rules && Array.isArray(data.rules)) {
-      return data.rules.map((r: any) => `${r.short_name}: ${r.description}`).join('\n');
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-// 100% REAL VERIFIED LIVE INTENT LEADS SCANNER (FETCHED LIVE FROM REDDIT)
+// 100% REAL LIVE INTENT LEADS SCANNER (ZERO FAKE FALLBACK DATA)
 async function fetchRealIntentLeads() {
   const targetSubreddits = ['plumbing', 'HVAC', 'smallbusiness', 'HomeImprovement'];
   const realLeads: any[] = [];
@@ -246,41 +175,31 @@ async function fetchRealIntentLeads() {
     } catch (e) {}
   }
 
-  if (realLeads.length > 0) return realLeads;
+  if (realLeads.length === 0) {
+    throw new Error("实时扫盘 Reddit 未捕获到最新意向求助帖，请稍微重试。");
+  }
 
-  // 100% VERIFIED LIVE NON-DELETED INTENT LEADS (EXACT LIVE URLS)
-  return [
-    {
-      id: 'intent-live-1',
-      subreddit: 'r/HomeImprovement',
-      title: 'I feel sick every time I shower at home, but nowhere else.',
-      author: 'u/HomeShowerQuestion',
-      intentScore: 5,
-      snippet: 'Every time I run the master bathroom shower, I get dizzy. Could this be a sewer gas vent leak or mold issue in pipes?',
-      time: '在线求助中',
-      permalink: 'https://www.reddit.com/r/HomeImprovement/comments/1vcage3/i_feel_sick_every_time_i_shower_at_home_but/'
-    },
-    {
-      id: 'intent-live-2',
-      subreddit: 'r/smallbusiness',
-      title: 'Share your small business trade software experience and recommendations',
-      author: 'u/TradeOwner2026',
-      intentScore: 5,
-      snippet: 'Looking for software tools used by trade contractors to handle client communication and dispatch.',
-      time: '在线讨论中',
-      permalink: 'https://www.reddit.com/r/smallbusiness/comments/1r5ziuc/in_this_post_share_your_small_business_experience/'
-    },
-    {
-      id: 'intent-live-3',
-      subreddit: 'r/HVAC',
-      title: 'State of the Subreddit: Trade tools and contractor discussion',
-      author: 'u/HVAC_Pro_Mod',
-      intentScore: 4,
-      snippet: 'Official discussion thread for trade business owners, service directors, and dispatch tools.',
-      time: '在线讨论中',
-      permalink: 'https://www.reddit.com/r/HVAC/comments/1s96k47/state_of_the_subreddit_33126/'
+  return realLeads;
+}
+
+// Helper to fetch live Reddit rules
+async function fetchRealRedditRules(subreddit: string) {
+  const cleanSub = subreddit.replace(/^r\//, '');
+  const url = `https://www.reddit.com/r/${cleanSub}/about/rules.json`;
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
     }
-  ];
+  });
+  
+  if (!res.ok) {
+    throw new Error(`无法获取 r/${cleanSub} 的版规数据 (HTTP ${res.status})`);
+  }
+  const data = await res.json();
+  if (data.rules && Array.isArray(data.rules)) {
+    return data.rules.map((r: any) => `${r.short_name}: ${r.description}`).join('\n');
+  }
+  throw new Error(`r/${cleanSub} 未返回有效的版规列表。`);
 }
 
 export async function POST(req: Request) {
@@ -289,17 +208,13 @@ export async function POST(req: Request) {
     const { 
       action, 
       websiteUrl, 
-      redditEmail, 
-      redditPassword,
       redditUsername,
       subredditName, 
       subredditRules, 
       knowledgeBase, 
       postContext, 
       intentLead, 
-      karmaPost,
-      postPermalink,
-      commentText
+      karmaPost
     } = body;
 
     // Action 16: SCAN REAL INTENT BUYERS STREAM FROM REDDIT
@@ -311,41 +226,17 @@ export async function POST(req: Request) {
       });
     }
 
-    // Action 14: SNOOGROW DIRECT USER PROFILE VERIFY VIA REAL API
+    // Action 14: READ-ONLY PUBLIC PROFILE VERIFICATION
     if (action === 'direct_reddit_login' || action === 'snoogrow_direct_login') {
-      const identifier = redditEmail || redditUsername;
-      if (!identifier || !identifier.trim()) {
+      if (!redditUsername || !redditUsername.trim()) {
         return NextResponse.json({
           success: false,
-          error: "请输入您的 Reddit 注册邮箱或用户名！"
-        });
+          error: "请输入有效的 Reddit 用户名！"
+        }, { status: 400 });
       }
 
-      const profileRes = await fetchRealRedditUserProfile(identifier);
+      const profileRes = await fetchRealRedditUserProfile(redditUsername);
       return NextResponse.json(profileRes);
-    }
-
-    // Action 15: 100% REAL PLAYWRIGHT HEADLESS BROWSER AUTOMATED COMMENTING (ZERO FAKE DATA)
-    if (action === 'snoogrow_auto_post_comment') {
-      const user = redditUsername || redditEmail;
-      const targetUrl = postPermalink || karmaPost?.permalink;
-
-      if (!user || !redditPassword) {
-        return NextResponse.json({
-          success: false,
-          error: "未提供 Reddit 邮箱/用户名或密码，Playwright 无法在后台自动登录发帖。"
-        });
-      }
-
-      if (!targetUrl || !commentText) {
-        return NextResponse.json({
-          success: false,
-          error: "缺少目标帖子链接或 AI 生成的评论内容。"
-        });
-      }
-
-      const playwrightRes = await autoPublishRedditCommentViaPlaywright(user, redditPassword, targetUrl, commentText);
-      return NextResponse.json(playwrightRes);
     }
 
     // Action 4: 100% REAL LIVE REDDIT HOT POSTS SCANNING
@@ -360,9 +251,9 @@ export async function POST(req: Request) {
     // Action 0: Real Scrape + Real Gemini LLM KB Extraction + 10+ Subreddit Recommendations
     if (action === 'auto_scrape_website') {
       if (!websiteUrl) {
-        return NextResponse.json({ success: false, error: "Please enter a valid website URL" });
+        return NextResponse.json({ success: false, error: "Please enter a valid website URL" }, { status: 400 });
       }
-      const scrapedText = await scrapeWebpageText(websiteUrl) || `Website URL: ${websiteUrl}`;
+      const scrapedText = await scrapeWebpageText(websiteUrl);
       const prompt = `You are an expert SaaS marketing architect. I scraped this text from ${websiteUrl}:
 """
 ${scrapedText}
@@ -372,28 +263,17 @@ Output raw JSON only with keys:
 2. "recommendedSubreddits": Array of 8-10 relevant subreddits with keys: name, members, matchScore, reason, riskLevel.`;
 
       const aiResponseText = await callGeminiAPI(prompt, "Output raw JSON only.");
-      let parsedAIResult: any = null;
-      if (aiResponseText) {
-        try {
-          const cleanJSONStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
-          parsedAIResult = JSON.parse(cleanJSONStr);
-        } catch (e) {}
+      if (!aiResponseText) {
+        throw new Error("Gemini API 未能生成解构后的知识库内容。");
       }
 
-      const fullSubreddits = parsedAIResult?.recommendedSubreddits && parsedAIResult.recommendedSubreddits.length >= 5
-        ? parsedAIResult.recommendedSubreddits
-        : [
-            { name: 'r/plumbing', members: '185K', matchScore: 98, reason: '核心专业水管工人与工程承包商聚集地，寻找接单派单工具', riskLevel: 'Moderate' },
-            { name: 'r/HVAC', members: '142K', matchScore: 95, reason: '暖通与水管综合施工队，经常讨论错失客户与响应速度', riskLevel: 'Friendly' },
-            { name: 'r/HomeImprovement', members: '2.8M', matchScore: 92, reason: '房主高频求助与维修咨询社区，高意向订单抓取地', riskLevel: 'Friendly' },
-            { name: 'r/DIY', members: '22M', matchScore: 90, reason: '管道与房屋修缮DIY高频交流板块', riskLevel: 'Friendly' },
-            { name: 'r/smallbusiness', members: '1.4M', matchScore: 88, reason: '本地服务型企业主讨论接单与自动化工具', riskLevel: 'Friendly' }
-          ];
+      const cleanJSONStr = aiResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedAIResult = JSON.parse(cleanJSONStr);
 
       return NextResponse.json({
         success: true,
-        extractedKB: parsedAIResult?.extractedKB || `Website: ${websiteUrl}\nText:\n${scrapedText.slice(0, 500)}`,
-        recommendedSubreddits: fullSubreddits
+        extractedKB: parsedAIResult.extractedKB,
+        recommendedSubreddits: parsedAIResult.recommendedSubreddits
       });
     }
 
@@ -405,52 +285,43 @@ Output raw JSON only with keys:
 
       const prompt = `Analyze Reddit rules for ${targetSub}:\n"""\n${rawRules}\n"""\nOutput JSON only with keys: allowSelfPromotion, riskScore, constraints, requiresKarma, ruleStrictness.`;
       const aiText = await callGeminiAPI(prompt, "Return raw JSON only.");
-      let rulesSummary: any = null;
-      if (aiText) {
-        try {
-          const cleanStr = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-          rulesSummary = JSON.parse(cleanStr);
-        } catch (e) {}
+      if (!aiText) {
+        throw new Error("Gemini API 未能完成版规风控打分。");
       }
+      const cleanStr = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const rulesSummary = JSON.parse(cleanStr);
 
       return NextResponse.json({
         success: true,
         targetSub,
         rawRules,
-        rulesSummary: rulesSummary || {
-          allowSelfPromotion: 'restricted',
-          riskScore: 3,
-          constraints: ['遵循通用法则'],
-          requiresKarma: 50,
-          ruleStrictness: 'Moderate'
-        }
+        rulesSummary
       });
     }
 
     // Action 2: 100% DYNAMIC 90:10 KNOWLEDGE BASE AI RAG GENERATOR
     if (action === 'generate_reply') {
-      const ctx = postContext || "How do trade contractors stop losing missed call leads during busy work hours?";
-      const kb = knowledgeBase || "Plumbify is an automated SMS speed-to-lead SaaS for plumbers and contractors.";
+      if (!postContext || !knowledgeBase) {
+        return NextResponse.json({ success: false, error: "请提供帖子上下文与企业知识库内容！" }, { status: 400 });
+      }
 
       const prompt = `Act as an authentic, helpful software founder on Reddit responding directly to this specific post:
-Post Context: "${ctx}"
-Knowledge Base / Product Context: "${kb}"
+Post Context: "${postContext}"
+Knowledge Base / Product Context: "${knowledgeBase}"
 
 Strict Instructions:
 - 90:10 Rule: 90% actionable trade/business advice specifically answering the Post Context, 10% natural soft mention of product in Knowledge Base.
-- Completely customized to Post Context "${ctx}".
+- Completely customized to Post Context "${postContext}".
 - No generic pitches. Max 120 words.`;
 
       const aiReply = await callGeminiAPI(prompt, "Helpful SaaS founder on Reddit.");
-
-      let finalGenerated = aiReply;
-      if (!finalGenerated) {
-        finalGenerated = `In trade contracting, 78% of emergency callers hire the first plumber who responds. If a call goes to voicemail while you're under a sink, they immediately call the next guy on Google.\n\nTo fix this without hiring a 24/7 receptionist, implement an automated instant missed-call text-back system (we built Plumbify for this exact workflow). The moment a call drops, an automated SMS fires asking for photos of the issue. It captures 8-12 extra jobs a month on autopilot.`;
+      if (!aiReply) {
+        throw new Error("Gemini API 生成 90:10 回复失败。");
       }
 
       return NextResponse.json({
         success: true,
-        generatedReply: finalGenerated,
+        generatedReply: aiReply,
         complianceStatus: "PASSED_90_10_RULE"
       });
     }
@@ -460,6 +331,10 @@ Strict Instructions:
       const postTitle = karmaPost?.title || '';
       const postSnippet = karmaPost?.snippet || '';
       const sub = karmaPost?.subreddit || 'r/plumbing';
+
+      if (!postTitle) {
+        return NextResponse.json({ success: false, error: "未选择有效的目标帖子。" }, { status: 400 });
+      }
 
       const prompt = `Write a top-voted, 100% authentic, expert Reddit comment directly addressing this specific post:
 Subreddit: ${sub}
@@ -473,64 +348,63 @@ Requirements:
 - Max 100 words.`;
 
       const aiReply = await callGeminiAPI(prompt, "You are a top-voted Reddit expert.");
-      
-      let finalReply = aiReply;
-      if (!finalReply) {
-        if (postTitle.toLowerCase().includes('glowing') || postTitle.toLowerCase().includes('boiler')) {
-          finalReply = "Shut off the gas and main power switch immediately! A glowing pipe indicates severe fuel over-firing or a blocked heat exchanger line. Do not attempt to flush it yourself until a certified boiler technician inspects the burner.";
-        } else if (postTitle.toLowerCase().includes('shower') || postTitle.toLowerCase().includes('sick')) {
-          finalReply = "Check your P-trap and dry trap seal first! Sewer gas (hydrogen sulfide) often builds up inside shower drains when the water trap dries out or if a vent stack is cracked behind the drywall. Pouring a gallon of water down infrequently used drains usually fixes dry traps.";
-        } else {
-          finalReply = `Regarding "${postTitle}": Always diagnose the root cause before replacing parts. Inspecting pressure valves and pipe seals first will save you replacement costs.`;
-        }
+      if (!aiReply) {
+        throw new Error("Gemini API 针对该文章生成干货评论失败。");
       }
 
       return NextResponse.json({
         success: true,
-        karmaReply: finalReply,
+        karmaReply: aiReply,
         strategy: "100% Post-Specific Dynamic AI Engagement"
       });
     }
 
-    // Action 3: REAL GHL CRM API INTEGRATION (STRICT 100% VALID CREATION)
+    // Action 3: REAL GHL CRM API INTEGRATION (ONLY VALID USER-PROVIDED LEADS)
     if (action === 'sync_ghl') {
-      const authorName = (intentLead?.author || "Reddit Trade Lead").replace(/^u\//, '');
+      if (!GHL_TOKEN || !GHL_LOCATION_ID) {
+        throw new Error("Missing GHL_PRIVATE_TOKEN or GHL_LOCATION_ID in server environment variables!");
+      }
+
+      if (!intentLead || !intentLead.author) {
+        return NextResponse.json({ success: false, error: "未提供有效的意向买家信息。" }, { status: 400 });
+      }
+
+      const authorName = intentLead.author.replace(/^u\//, '');
       const ghlPayload = {
         locationId: GHL_LOCATION_ID,
         firstName: authorName,
-        lastName: "Reddit Buyer",
-        email: `${authorName.toLowerCase()}@reddit-lead.com`,
-        phone: "+15125550199",
-        companyName: intentLead?.subreddit ? `Reddit ${intentLead.subreddit}` : "Reddit Trade Prospect",
+        companyName: intentLead.subreddit ? `Reddit ${intentLead.subreddit}` : "Reddit Trade Prospect",
         tags: ["reddit_intent_lead", "snoorise_ai_captured", "status_high_intent"]
       };
 
-      try {
-        const ghlRes = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${GHL_TOKEN}`,
-            "Version": "2021-07-28",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(ghlPayload)
-        });
+      const ghlRes = await fetch("https://services.leadconnectorhq.com/contacts/upsert", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GHL_TOKEN}`,
+          "Version": "2021-07-28",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(ghlPayload)
+      });
 
-        const ghlData = await ghlRes.json();
-        return NextResponse.json({
-          success: true,
-          ghlContactId: ghlData.contact?.id || "ghl_sync_ok"
-        });
-      } catch (e: any) {
-        return NextResponse.json({
-          success: true,
-          ghlContactId: "ghl_sync_queued"
-        });
+      if (!ghlRes.ok) {
+        const ghlErr = await ghlRes.text();
+        throw new Error(`GHL API 同步失败 (Status ${ghlRes.status}): ${ghlErr}`);
       }
+
+      const ghlData = await ghlRes.json();
+      return NextResponse.json({
+        success: true,
+        ghlContactId: ghlData.contact?.id || "ghl_sync_ok"
+      });
     }
 
-    return NextResponse.json({ success: false, error: "Invalid action" });
+    return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 200 });
+    console.error("API Action Error:", err.message);
+    return NextResponse.json({ 
+      success: false, 
+      error: err.message || "Internal Server Error" 
+    }, { status: 500 });
   }
 }

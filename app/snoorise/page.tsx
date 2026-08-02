@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 export default function SnooRiseDashboard() {
-  const [activeTab, setActiveTab] = useState<'karma' | 'auto_init' | 'rules' | 'generator' | 'feed' | 'crm'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'karma' | 'generator' | 'auto_init' | 'rules' | 'crm'>('feed');
 
   // Instant Feedback Toast Notification
   const [toastMessage, setToastMessage] = useState('');
@@ -15,101 +15,38 @@ export default function SnooRiseDashboard() {
     }, 4000);
   };
 
-  // Safe JSON fetch helper
+  // Safe JSON fetch helper with explicit error status handling
   const safeFetchJSON = async (url: string, options?: any) => {
     try {
       const res = await fetch(url, options);
-      const text = await res.text();
-      try {
-        return JSON.parse(text);
-      } catch (parseErr) {
-        console.error("Non-JSON Response:", text);
-        return { success: false, error: "Server returned non-JSON html response" };
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || `请求失败 (HTTP ${res.status})` };
       }
+      return data;
     } catch (netErr: any) {
-      return { success: false, error: netErr.message };
+      return { success: false, error: netErr.message || "网络请求失败，请检查通道连接。" };
     }
   };
 
-  // SnooGrow Direct Email / Password Login State
-  const [redditEmailInput, setRedditEmailInput] = useState('');
-  const [redditPasswordInput, setRedditPasswordInput] = useState('');
+  // Reddit Username Profile Check State
+  const [redditUsernameInput, setRedditUsernameInput] = useState('');
   const [connectedUser, setConnectedUser] = useState<any>(null);
   const [loadingDirectLogin, setLoadingDirectLogin] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  // Auto Posting State (Playwright Engine)
-  const [loadingAutoPublish, setLoadingAutoPublish] = useState(false);
-  const [autoPublishStatus, setAutoPublishStatus] = useState<any>(null);
-
   // Active Selected Subreddit Selector
   const [activeSubFilter, setActiveSubFilter] = useState('r/plumbing');
 
-  // 100% VERIFIED LIVE NON-DELETED REDDIT POSTS
-  const [karmaPosts, setKarmaPosts] = useState<any[]>([
-    {
-      id: 'active-2026-live-1',
-      name: 't3_1vcfcyb',
-      subreddit: 'r/plumbing',
-      title: 'Pipe glowing boiler - concern?',
-      author: 'u/HomeBoilerUser',
-      upvotes: 240,
-      comments: 65,
-      snippet: 'My boiler pipe seems extremely hot and glowing near the valve fitting. Is this an immediate shutdown emergency?',
-      permalink: 'https://www.reddit.com/r/Plumbing/comments/1vcfcyb/pipe_glowing_boiler_concern/'
-    },
-    {
-      id: 'active-2026-live-2',
-      name: 't3_1vcage3',
-      subreddit: 'r/HomeImprovement',
-      title: 'I feel sick every time I shower at home, but nowhere else.',
-      author: 'u/HomeShowerQuestion',
-      upvotes: 1850,
-      comments: 340,
-      snippet: 'Every time I run the master bathroom shower, I get dizzy. Could this be a sewer gas vent leak or mold issue in pipes?',
-      permalink: 'https://www.reddit.com/r/HomeImprovement/comments/1vcage3/i_feel_sick_every_time_i_shower_at_home_but/'
-    }
-  ]);
-
+  // Live Reddit Hot Posts Wall State (Zero Dummy Data)
+  const [karmaPosts, setKarmaPosts] = useState<any[]>([]);
   const [loadingKarmaScan, setLoadingKarmaScan] = useState(false);
   const [selectedKarmaPost, setSelectedKarmaPost] = useState<any>(null);
   const [generatedKarmaReply, setGeneratedKarmaReply] = useState('');
   const [loadingKarmaGen, setLoadingKarmaGen] = useState(false);
 
-  // Intent Leads Live Stream State
-  const [intentLeads, setIntentLeads] = useState<any[]>([
-    {
-      id: 'intent-live-1',
-      subreddit: 'r/HomeImprovement',
-      title: 'I feel sick every time I shower at home, but nowhere else.',
-      author: 'u/HomeShowerQuestion',
-      intentScore: 5,
-      snippet: 'Every time I run the master bathroom shower, I get dizzy. Could this be a sewer gas vent leak or mold issue in pipes?',
-      time: '在线求助中',
-      permalink: 'https://www.reddit.com/r/HomeImprovement/comments/1vcage3/i_feel_sick_every_time_i_shower_at_home_but/'
-    },
-    {
-      id: 'intent-live-2',
-      subreddit: 'r/smallbusiness',
-      title: 'Share your small business trade software experience and recommendations',
-      author: 'u/TradeOwner2026',
-      intentScore: 5,
-      snippet: 'Looking for software tools used by trade contractors to handle client communication and dispatch.',
-      time: '在线讨论中',
-      permalink: 'https://www.reddit.com/r/smallbusiness/comments/1r5ziuc/in_this_post_share_your_small_business_experience/'
-    },
-    {
-      id: 'intent-live-3',
-      subreddit: 'r/HVAC',
-      title: 'State of the Subreddit: Trade tools and contractor discussion',
-      author: 'u/HVAC_Pro_Mod',
-      intentScore: 4,
-      snippet: 'Official discussion thread for trade business owners, service directors, and dispatch tools.',
-      time: '在线讨论中',
-      permalink: 'https://www.reddit.com/r/HVAC/comments/1s96k47/state_of_the_subreddit_33126/'
-    }
-  ]);
-
+  // Live Intent Leads Stream State (Zero Dummy Data)
+  const [intentLeads, setIntentLeads] = useState<any[]>([]);
   const [loadingIntentScan, setLoadingIntentScan] = useState(false);
 
   // Dynamic Rules Radar State (Subrise Engine)
@@ -121,11 +58,7 @@ export default function SnooRiseDashboard() {
   // Auto Scrape State (SnooGrow Style)
   const [websiteUrl, setWebsiteUrl] = useState('https://plumbify.net');
   const [loadingAuto, setLoadingAuto] = useState(false);
-  const [autoSubreddits, setAutoSubreddits] = useState<any[]>([
-    { name: 'r/plumbing', members: '185K', matchScore: 98, reason: '核心专业水管工人与工程承包商聚集地，寻找接单派单工具', riskLevel: 'Moderate' },
-    { name: 'r/HVAC', members: '142K', matchScore: 95, reason: '暖通与水管综合施工队，经常讨论错失客户与响应速度', riskLevel: 'Friendly' },
-    { name: 'r/HomeImprovement', members: '2.8M', matchScore: 92, reason: '房主高频求助与维修咨询社区，高意向订单抓取地', riskLevel: 'Friendly' }
-  ]);
+  const [autoSubreddits, setAutoSubreddits] = useState<any[]>([]);
 
   // Generator State (90:10 RAG)
   const [postContext, setPostContext] = useState('How do master plumbers handle missed calls after hours? We lose ~10 leads every week on job sites.');
@@ -165,87 +98,13 @@ export default function SnooRiseDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'scan_intent_leads' })
     });
-    if (data && data.success && data.intentLeads && data.intentLeads.length > 0) {
+    if (data && data.success && data.intentLeads) {
       setIntentLeads(data.intentLeads);
       showToast(`✅ 实时扫描成功！捕获到 ${data.intentLeads.length} 条真实高意向求助买家！`);
     } else {
-      showToast('✅ 意向买家信息流就绪！');
+      showToast(`❌ 扫盘提示: ${data?.error || "请重试"}`);
     }
     setLoadingIntentScan(false);
-  };
-
-  // Auto Fetch 100% Real Live Reddit Hot Posts on Load
-  useEffect(() => {
-    handleScanKarmaPosts(activeSubFilter);
-    handleScanIntentLeads();
-  }, []);
-
-  // Handle SnooGrow Direct Account Binding via Email + Password
-  const handleSnooGrowDirectLogin = async () => {
-    if (!redditEmailInput.trim()) {
-      setLoginError('请输入您的 Reddit 注册邮箱或用户名！');
-      return;
-    }
-    setLoadingDirectLogin(true);
-    setLoginError('');
-    showToast(`🚀 正在连接 Reddit 官方 REST API 查验 u/${redditEmailInput}...`);
-    
-    const data = await safeFetchJSON('/api/snoorise', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'snoogrow_direct_login',
-        redditEmail: redditEmailInput,
-        redditPassword: redditPasswordInput
-      })
-    });
-
-    if (data && data.success) {
-      setConnectedUser(data);
-      showToast(`🎉 成功查验真实账号 u/${data.username}！`);
-    } else {
-      setConnectedUser(null);
-      setLoginError(data?.error || '查验失败');
-      showToast(`❌ ${data?.error || '查验失败'}`);
-    }
-    setLoadingDirectLogin(false);
-  };
-
-  // Handle 100% Real Playwright Automated Comment Publish
-  const handleSnooGrowAutoPublish = async () => {
-    if (!selectedKarmaPost || !generatedKarmaReply) {
-      showToast('⚠️ 请先在左侧选择热帖并生成 AI 回复！');
-      return;
-    }
-    if (!redditEmailInput || !redditPasswordInput) {
-      showToast('⚠️ 请先在顶部输入您的 Reddit 登录邮箱/用户名和密码！');
-      return;
-    }
-
-    setLoadingAutoPublish(true);
-    setAutoPublishStatus(null);
-    showToast(`🤖 [Playwright 真正无头 Chrome 启动] 正在后台代表 ${redditEmailInput} 登录 Reddit 并发表评论...`);
-
-    const data = await safeFetchJSON('/api/snoorise', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'snoogrow_auto_post_comment',
-        redditEmail: redditEmailInput,
-        redditPassword: redditPasswordInput,
-        postPermalink: selectedKarmaPost.permalink,
-        commentText: generatedKarmaReply
-      })
-    });
-
-    setAutoPublishStatus(data);
-
-    if (data && data.success) {
-      showToast(data.message || '🎉 Playwright 后台真实发帖成功！');
-    } else {
-      showToast(`❌ ${data?.error || 'Playwright 浏览器运行遇到异常'}`);
-    }
-    setLoadingAutoPublish(false);
   };
 
   // 100% Real Live Reddit Hot Posts Scanner
@@ -254,20 +113,55 @@ export default function SnooRiseDashboard() {
     setLoadingKarmaScan(true);
     showToast(`📡 正在全网扫盘《${subToScan}》当前最新存活热帖...`);
     
-    // Dual Proxy fetch guaranteed to return live articles
-    const livePosts = await safeFetchJSON('/api/snoorise', {
+    const data = await safeFetchJSON('/api/snoorise', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'scan_karma_posts', subredditName: subToScan })
     });
     
-    if (livePosts && livePosts.success && livePosts.karmaPosts && livePosts.karmaPosts.length > 0) {
-      setKarmaPosts(livePosts.karmaPosts);
-      showToast(`✅ 扫盘成功！拉取到 ${livePosts.karmaPosts.length} 条《${subToScan}》最新热帖！`);
+    if (data && data.success && data.karmaPosts) {
+      setKarmaPosts(data.karmaPosts);
+      showToast(`✅ 扫盘成功！拉取到 ${data.karmaPosts.length} 条《${subToScan}》最新热帖！`);
     } else {
-      showToast('✅ 热门文章通道就绪！');
+      showToast(`❌ ${data?.error || '扫盘失败'}`);
     }
     setLoadingKarmaScan(false);
+  };
+
+  // Auto Fetch Real Live Reddit Data on Mount
+  useEffect(() => {
+    handleScanKarmaPosts(activeSubFilter);
+    handleScanIntentLeads();
+  }, []);
+
+  // Public Profile Check (No Passwords Handled)
+  const handleVerifyPublicRedditProfile = async () => {
+    if (!redditUsernameInput.trim()) {
+      setLoginError('请输入您的 Reddit 用户名！');
+      return;
+    }
+    setLoadingDirectLogin(true);
+    setLoginError('');
+    showToast(`🚀 正在连接 Reddit 官方 API 查验 u/${redditUsernameInput}...`);
+    
+    const data = await safeFetchJSON('/api/snoorise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'snoogrow_direct_login',
+        redditUsername: redditUsernameInput
+      })
+    });
+
+    if (data && data.success) {
+      setConnectedUser(data);
+      showToast(`🎉 成功查验真实公开账号 u/${data.username}！`);
+    } else {
+      setConnectedUser(null);
+      setLoginError(data?.error || '查验失败');
+      showToast(`❌ ${data?.error || '查验失败'}`);
+    }
+    setLoadingDirectLogin(false);
   };
 
   const handleGenerateKarmaReply = async (post: any) => {
@@ -283,7 +177,7 @@ export default function SnooRiseDashboard() {
       setGeneratedKarmaReply(data.karmaReply);
       showToast('✨ Gemini 1.5 Flash 真实干货回复生成完毕！');
     } else {
-      showToast('✨ 回复生成完成！');
+      showToast(`❌ ${data?.error || '回复生成遇到问题'}`);
     }
     setLoadingKarmaGen(false);
   };
@@ -302,6 +196,8 @@ export default function SnooRiseDashboard() {
       setRawRules(data.rawRules);
       setParsedRules(data.rulesSummary);
       showToast(`✅ 《${subName}》版规雷达分析完成！`);
+    } else {
+      showToast(`❌ ${data?.error || '规则解析失败'}`);
     }
     setLoadingRules(false);
   };
@@ -317,11 +213,12 @@ export default function SnooRiseDashboard() {
     if (data && data.success) {
       setParsedRules(data.rulesSummary);
       showToast('✅ 解析完成！');
+    } else {
+      showToast(`❌ ${data?.error || '解析失败'}`);
     }
     setLoadingRules(false);
   };
 
-  // 90:10 Generator Execution Handler
   const handleGenerateReply = async () => {
     setLoadingGen(true);
     setGeneratedReply('');
@@ -336,7 +233,7 @@ export default function SnooRiseDashboard() {
       setGeneratedReply(data.generatedReply);
       showToast('✨ 90:10 零防封回复生成完毕！');
     } else {
-      showToast(`❌ 生成逻辑遇到异常。`);
+      showToast(`❌ ${data?.error || '生成遇到异常'}`);
     }
     setLoadingGen(false);
   };
@@ -353,6 +250,8 @@ export default function SnooRiseDashboard() {
       setKnowledgeBase(data.extractedKB);
       setAutoSubreddits(data.recommendedSubreddits);
       showToast(`✅ 成功提取 KB 知识库并深度匹配 ${data.recommendedSubreddits.length} 个核心 Subreddits！`);
+    } else {
+      showToast(`❌ ${data?.error || '抓取解析失败'}`);
     }
     setLoadingAuto(false);
   };
@@ -367,13 +266,15 @@ export default function SnooRiseDashboard() {
       body: JSON.stringify({ action: 'sync_ghl', intentLead: lead })
     });
     if (data && data.success) {
-      setSyncStatus(`✅ Successfully synced ${lead.author} to Plumbify GHL CRM! (Contact ID: ${data.ghlContactId})`);
-      showToast(`✅ 已将 ${lead.author} 真正写入 GHL CRM 并打上 high_intent 标签！`);
+      setSyncStatus(`✅ 成功将 ${lead.author} 同步至 Plumbify GHL CRM! (ID: ${data.ghlContactId})`);
+      showToast(`✅ 已写入 GHL CRM 并打上 tag！`);
+    } else {
+      setSyncStatus(`❌ CRM 同步失败: ${data?.error}`);
+      showToast(`❌ ${data?.error || 'CRM 同步失败'}`);
     }
     setLoadingSync(false);
   };
 
-  // Action: Copy Text and Trigger Toast
   const handleCopyText = (text: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -395,14 +296,14 @@ export default function SnooRiseDashboard() {
           <div className="flex items-center space-x-3">
             <span className="text-3xl">🚀</span>
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">
-              SnooRise AI Platform (100% Real Live Data)
+              SnooRise AI Platform (Compliant & Secure)
             </h1>
             <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-full font-mono">
-              Live Verified Stream
+              100% Compliant Workflow
             </span>
           </div>
           <p className="text-slate-400 text-sm mt-1">
-            🔥 100% 实时扫盘抓取 Reddit 官方真实存活热帖 • 链接点击 100% 原帖直达 • Playwright 真实代发 • GHL CRM 闭环
+            🎯 捕获正在寻找水管/维修服务的房主 ➔ Gemini AI 草拟专业干货回复 ➔ 承包商一键复制并秒开原帖发布
           </p>
         </div>
 
@@ -411,12 +312,12 @@ export default function SnooRiseDashboard() {
           {connectedUser ? (
             <div className="flex items-center space-x-2 bg-emerald-950/60 border border-emerald-800 px-4 py-2 rounded-xl text-xs font-mono text-emerald-300">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>真实账号 API 已接入: <strong>u/{connectedUser.username}</strong></span>
+              <span>已查验 Reddit 账号: <strong>u/{connectedUser.username}</strong></span>
             </div>
           ) : (
-            <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-4 py-2 rounded-xl text-xs font-mono text-amber-400">
-              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-              <span>未绑定账号 (填入 Username 与密码开启 Playwright 代发)</span>
+            <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-4 py-2 rounded-xl text-xs font-mono text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>受信任合规模式 (无需提供密码)</span>
             </div>
           )}
         </div>
@@ -427,7 +328,7 @@ export default function SnooRiseDashboard() {
         <div className="flex space-x-2 border-b border-slate-800 mb-8 overflow-x-auto pb-1">
           {[
             { id: 'feed', label: '🎯 100% 真实意向买家监控流', icon: '🎯' },
-            { id: 'karma', label: '🔥 100% 真实文章扫盘与 Playwright 真实代发', icon: '🔥' },
+            { id: 'karma', label: '🔥 在榜热帖草拟与一键直达发帖', icon: '🔥' },
             { id: 'generator', label: '🧠 90:10 知识库生成器', icon: '🧠' },
             { id: 'auto_init', label: '🌐 网址一键匹配 10+ Subreddits 社区', icon: '🌐' },
             { id: 'rules', label: '🛡️ 真实版规雷达分析', icon: '🛡️' },
@@ -478,93 +379,94 @@ export default function SnooRiseDashboard() {
                 </div>
               )}
 
-              {intentLeads.map((lead) => (
-                <div key={lead.id} className="bg-slate-900/80 border border-slate-800 hover:border-orange-500/50 transition duration-200 rounded-2xl p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 space-x-0 md:space-x-4">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
-                        {lead.subreddit}
-                      </span>
-                      <span className="text-xs font-bold text-slate-300">{lead.author}</span>
-                      <span className="text-xs text-slate-500">• {lead.time}</span>
-                    </div>
-                    <h3 className="text-base font-bold text-slate-100">{lead.title}</h3>
-                    <p className="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-                      "{lead.snippet}"
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-end space-y-3 w-full md:w-auto">
-                    <div className="flex items-center space-x-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-bold">
-                      <span>意向得分:</span>
-                      <span>{lead.intentScore} / 5</span>
+              {intentLeads.length > 0 ? (
+                intentLeads.map((lead) => (
+                  <div key={lead.id} className="bg-slate-900/80 border border-slate-800 hover:border-orange-500/50 transition duration-200 rounded-2xl p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 space-x-0 md:space-x-4">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center space-x-3">
+                        <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
+                          {lead.subreddit}
+                        </span>
+                        <span className="text-xs font-bold text-slate-300">{lead.author}</span>
+                        <span className="text-xs text-slate-500">• {lead.time}</span>
+                      </div>
+                      <h3 className="text-base font-bold text-slate-100">{lead.title}</h3>
+                      <p className="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                        "{lead.snippet}"
+                      </p>
                     </div>
 
-                    <div className="flex space-x-2 w-full md:w-auto">
-                      <a
-                        href={lead.permalink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 md:flex-none bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition border border-orange-500/40 block text-center shadow-md"
-                      >
-                        ↗ 秒开 Reddit 原贴
-                      </a>
-                      <button
-                        onClick={() => handleSyncCRM(lead)}
-                        disabled={loadingSync}
-                        className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md whitespace-nowrap"
-                      >
-                        一键同步至 CRM
-                      </button>
+                    <div className="flex flex-col items-end space-y-3 w-full md:w-auto">
+                      <div className="flex items-center space-x-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-bold">
+                        <span>意向得分:</span>
+                        <span>{lead.intentScore} / 5</span>
+                      </div>
+
+                      <div className="flex space-x-2 w-full md:w-auto">
+                        <a
+                          href={lead.permalink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 md:flex-none bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition border border-orange-500/40 block text-center shadow-md"
+                        >
+                          ↗ 秒开 Reddit 原贴
+                        </a>
+                        <button
+                          onClick={() => handleSyncCRM(lead)}
+                          disabled={loadingSync}
+                          className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md whitespace-nowrap"
+                        >
+                          一键同步至 CRM
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                !loadingIntentScan && (
+                  <div className="p-8 text-center text-xs text-slate-500 font-mono border border-dashed border-slate-800 rounded-2xl">
+                    点击右上角“📡 实时扫描最新意向求助买家”按钮实时拉取最新数据。
+                  </div>
+                )
+              )}
             </div>
 
             {syncStatus && (
-              <div className="p-4 bg-emerald-950/60 border border-emerald-800 text-emerald-300 rounded-xl text-sm font-mono text-center">
+              <div className="p-4 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl text-sm font-mono text-center">
                 {syncStatus}
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 1: Playwright Engine Input Credentials */}
+        {/* Tab 1: Real Live Karma Posts & Compliant One-Click Posting */}
         {activeTab === 'karma' && (
           <div className="space-y-8">
-            {/* Playwright Credentials Form */}
+            {/* Public Username Verification */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-                  <span>⚡ 输入您的 Reddit 用户名(No-Adeptness3065) + 密码（激活 Playwright 后台无头 Chrome 引擎）</span>
+                  <span>⚡ 查验您的 Reddit 公开 Profile (只读 API 查验)</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  填入 Username 凭证后，后端会真正启动 <code className="text-amber-300 font-mono">Playwright Headless Chromium</code> 浏览器，在后台真实打开 Reddit 登录并发帖！
+                  100% 遵循官方 OAuth 安全规范：无需输入密码凭据，输入用户名即可查验公开 Karma 与账号状态。
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex space-x-3">
                 <input
                   type="text"
-                  value={redditEmailInput}
-                  onChange={(e) => setRedditEmailInput(e.target.value)}
+                  value={redditUsernameInput}
+                  onChange={(e) => setRedditUsernameInput(e.target.value)}
                   placeholder="输入您的 Reddit Username (例: No-Adeptness3065)"
-                  className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:border-orange-500 outline-none font-mono"
-                />
-                <input
-                  type="password"
-                  value={redditPasswordInput}
-                  onChange={(e) => setRedditPasswordInput(e.target.value)}
-                  placeholder="输入您的 Reddit 登录密码"
-                  className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:border-orange-500 outline-none font-mono"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:border-orange-500 outline-none font-mono"
                 />
                 <button
-                  onClick={handleSnooGrowDirectLogin}
+                  onClick={handleVerifyPublicRedditProfile}
                   disabled={loadingDirectLogin}
                   className="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition text-sm shadow-md whitespace-nowrap"
                 >
-                  {loadingDirectLogin ? '打向 Reddit API 查验中...' : '🚀 查验我的真实 Reddit 账号'}
+                  {loadingDirectLogin ? '打向 API 查验中...' : '🚀 查验我的公开 Reddit 账号'}
                 </button>
               </div>
 
@@ -582,11 +484,11 @@ export default function SnooRiseDashboard() {
                       <span className="text-2xl">🟢</span>
                       <div>
                         <span className="font-extrabold text-slate-100 text-base">u/{connectedUser.username}</span>
-                        <span className="text-xs text-emerald-400 block">✅ 来自 Reddit 官方 REST API 的真实账号凭证</span>
+                        <span className="text-xs text-emerald-400 block">✅ 来自 Reddit 官方 REST API 的公开数据</span>
                       </div>
                     </div>
                     <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-3 py-1 rounded-full font-mono font-bold">
-                      🔥 账号凭证就绪
+                      Karma: {connectedUser.totalKarma || '正常'}
                     </span>
                   </div>
                 </div>
@@ -599,10 +501,10 @@ export default function SnooRiseDashboard() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-                      <span>🔥 Reddit 多社区文章墙 (选择不同社区刷新更多在线活帖)</span>
+                      <span>🔥 Reddit 在榜热帖实时扫描与 AI 文案一键直达</span>
                     </h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      点击下方不同社区 Pills 可实时切换抓取不同 Subreddit 社区下当前最新的活跃热帖：
+                      选择不同社区，实时生成高赞干货回复，点击按钮即可一键复制并直达 Reddit 原贴完成发布：
                     </p>
                   </div>
                   <button
@@ -644,48 +546,55 @@ export default function SnooRiseDashboard() {
                     </div>
                   )}
 
-                  {karmaPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      onClick={() => handleGenerateKarmaReply(post)}
-                      className={`p-4 rounded-xl border transition duration-200 cursor-pointer space-y-2.5 ${
-                        selectedKarmaPost?.id === post.id ? 'bg-slate-900 border-orange-500 shadow-xl' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{post.subreddit}</span>
-                        <span className="text-xs text-slate-400">{post.author}</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-100">{post.title}</h4>
-                      <p className="text-xs text-slate-400 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                        "{post.snippet}"
-                      </p>
-                      <div className="flex justify-between items-center text-xs text-slate-500 pt-1 font-mono">
-                        <span>👍 {post.upvotes} 点赞 • 💬 {post.comments} 讨论</span>
-                        <span className="text-orange-400 font-bold hover:underline">点击生成 AI 高赞回复 ➔</span>
-                      </div>
+                  {karmaPosts.length > 0 ? (
+                    karmaPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        onClick={() => handleGenerateKarmaReply(post)}
+                        className={`p-4 rounded-xl border transition duration-200 cursor-pointer space-y-2.5 ${
+                          selectedKarmaPost?.id === post.id ? 'bg-slate-900 border-orange-500 shadow-xl' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{post.subreddit}</span>
+                          <span className="text-xs text-slate-400">{post.author}</span>
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-100">{post.title}</h4>
+                        <p className="text-xs text-slate-400 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                          "{post.snippet}"
+                        </p>
+                        <div className="flex justify-between items-center text-xs text-slate-500 pt-1 font-mono">
+                          <span>👍 {post.upvotes} 点赞 • 💬 {post.comments} 讨论</span>
+                          <span className="text-orange-400 font-bold hover:underline">点击生成 AI 高赞回复 ➔</span>
+                        </div>
 
-                      {/* 100% Real Live Native Link (Exact /comments/ Article URL) */}
-                      <div className="pt-2">
-                        <a
-                          href={post.permalink}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyText(generatedKarmaReply);
-                          }}
-                          className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-md block text-center"
-                        >
-                          <span>🚀 复制 AI 评论并【秒开文章正文评论区】</span>
-                          <span>↗</span>
-                        </a>
+                        <div className="pt-2">
+                          <a
+                            href={post.permalink}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyText(generatedKarmaReply);
+                            }}
+                            className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-md block text-center"
+                          >
+                            <span>🚀 复制 AI 评论并【秒开文章正文评论区】</span>
+                            <span>↗</span>
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    !loadingKarmaScan && (
+                      <div className="p-8 text-center text-xs text-slate-500 font-mono border border-dashed border-slate-800 rounded-2xl">
+                        点击上方“📡 刷新热门文章”按钮实时获取在榜热帖。
+                      </div>
+                    )
+                  )}
                 </div>
 
-                {/* Gemini Reply & Playwright Real Automated Publish Card */}
+                {/* Gemini Reply Card */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
                   <div className="flex justify-between items-center">
                     <h4 className="text-xs font-bold text-slate-300">✍️ Gemini 1.5 Flash 针对选定文章生成的专属高赞回复：</h4>
@@ -704,43 +613,17 @@ export default function SnooRiseDashboard() {
                       </div>
 
                       <div className="space-y-3">
-                        {/* Playwright Automated Real Publish Button */}
-                        <button
-                          onClick={handleSnooGrowAutoPublish}
-                          disabled={loadingAutoPublish}
-                          className="w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:opacity-90 text-white text-xs font-extrabold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2"
-                        >
-                          <span>{loadingAutoPublish ? '🤖 Playwright 无头 Chrome 正在后台真实登录发帖中...' : '🤖 1. 启动 Playwright 无头 Chrome 浏览器在后台真正发表评论'}</span>
-                        </button>
-
                         <a
                           href={selectedKarmaPost.permalink}
                           target="_blank"
                           rel="noreferrer"
                           onClick={() => handleCopyText(generatedKarmaReply)}
-                          className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-3 rounded-xl border border-slate-700 transition flex items-center justify-center space-x-2 block text-center"
+                          className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:opacity-90 text-white text-xs font-extrabold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2 block text-center"
                         >
-                          <span>📋 2. 手动复制文案并直达《{selectedKarmaPost.title.slice(0, 15)}...》文章正文评论区</span>
+                          <span>🚀 复制文案 + 秒开《{selectedKarmaPost.title.slice(0, 15)}...》原贴发布</span>
                           <span>↗</span>
                         </a>
                       </div>
-
-                      {/* Display Playwright Real Execution Status */}
-                      {autoPublishStatus && (
-                        <div className={`p-4 rounded-xl text-xs font-mono border ${
-                          autoPublishStatus.success ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300' : 'bg-red-950/60 border-red-800 text-red-300'
-                        }`}>
-                          {autoPublishStatus.success ? (
-                            <div>
-                              <span>{autoPublishStatus.message}</span>
-                            </div>
-                          ) : (
-                            <div>
-                              <span>❌ Playwright 真实运行反馈: {autoPublishStatus.error}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg space-y-2">
