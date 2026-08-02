@@ -1,0 +1,112 @@
+{
+  "business_name": "Plumbify",
+  "industry": "Plumbing SaaS & B2B Automation",
+  "industry_template_key": "saas_b2b",
+  "website": "https://plumbify.net",
+  "services": [
+    "AI Call Dispatch & Virtual Receptionist",
+    "Automated Plumbing Invoicing & Payments",
+    "Plumbing CRM & Job Scheduling",
+    "60-Second AI Operations Audit"
+  ],
+  "locations": [
+    "United States",
+    "Canada"
+  ],
+  "target_audience": "Plumbing Company Owners, Master Plumbers, Service Directors, Dispatch Managers",
+  "brand_voice": {
+    "tone": "Professional, High-Performance, ROI-Driven, Modern",
+    "words_to_use": [
+      "AI dispatch",
+      "revenue leakage",
+      "zero missed calls",
+      "plumbing contractor",
+      "master plumber",
+      "automated invoicing"
+    ],
+    "words_to_avoid": [
+      "homeowner",
+      "residential repair",
+      "cheap plumber",
+      "leaking pipe",
+      "diy"
+    ]
+  },
+  "differentiators": [
+    "Purpose-built AI OS exclusively for plumbing companies",
+    "Eliminates 100% of after-hours missed calls",
+    "Seamless integration with QuickBooks and ServiceTitan",
+    "Instant 60-second AI revenue leakage audit"
+  ],
+  "competitors": [
+    "ServiceTitan",
+    "Housecall Pro",
+    "Jobber",
+    "GoHighLevel"
+  ],
+  "seasonality": {
+    "peak_months": [
+      "January",
+      "February",
+      "July",
+      "August"
+    ],
+    "slow_months": [
+      "April",
+      "October"
+    ],
+    "seasonal_hooks": [
+      "Winter freeze emergency call volume surge",
+      "Summer AC/plumbing peak service dispatch"
+    ]
+  },
+  "keyword_landscape": {
+    "high_intent_terms": [
+      "ai plumbing software",
+      "plumbing dispatch automation",
+      "plumbing crm software",
+      "master plumber software"
+    ],
+    "competitive_terms": [
+      "servicetitan alternative",
+      "housecall pro alternative",
+      "jobber for plumbers"
+    ],
+    "long_tail_opportunities": [
+      "how to automate plumbing dispatch",
+      "ai call handling for plumbing contractors"
+    ]
+  },
+  "unit_economics": {
+    "aov_usd": 299.0,
+    "profit_margin": 0.8,
+    "ltv_usd": 3588.0,
+    "avg_customer_lifespan_months": 24,
+    "source": "user_provided",
+    "last_confirmed": "2026-07-26"
+  },
+  "social_proof": [
+    "+35% Average Revenue Increase",
+    "0 Missed Emergency Calls",
+    "Trusted by 500+ Master Plumbers"
+  ],
+  "offers_or_promotions": [
+    "Free 60-Second AI Revenue Leakage Audit",
+    "14-Day Risk-Free Trial"
+  ],
+  "landing_pages": {
+    "https://plumbify.net/": {
+      "headline": "Scale Your Plumbing Business With Autonomous AI Dispatch & Operations",
+      "primary_cta": "Book a Demo",
+      "offer": "14-Day Risk-Free Trial"
+    },
+    "https://plumbify.net/ai-audit": {
+      "headline": "Uncover Missed Revenue in Your Plumbing Business",
+      "primary_cta": "Start Free Audit",
+      "offer": "60-Second Free AI Audit"
+    }
+  },
+  "notes": "Strict B2B SaaS context. Negative keywords must enforce exclusion of B2C homeowner terms.",
+  "audit_date": "2026-07-26",
+  "account_id": "230-527-5066"
+}

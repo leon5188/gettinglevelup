@@ -5,6 +5,16 @@ const nextConfig = {
   
   // Explicitly activate Gzip/Brotli compression
   compress: true,
+
+  // Next.js Rewrites to Proxy Reddit REST API Bypass CORS & 403
+  async rewrites() {
+    return [
+      {
+        source: '/reddit-proxy/:path*',
+        destination: 'https://www.reddit.com/:path*',
+      },
+    ];
+  },
   
   // Serve static public assets with aggressive Cache-Control headers to optimize network speed
   async headers() {

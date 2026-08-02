@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "NotFair-GoogleAds": {
+      "url": "https://www.notfair.co/api/mcp/google_ads"
+    },
+    "NotFair-MetaAds": {
+      "url": "https://www.notfair.co/api/mcp/meta_ads"
+    },
+    "NotFair-SearchConsole": {
+      "url": "https://www.notfair.co/api/mcp/google_search_console"
+    }
+  }
+}

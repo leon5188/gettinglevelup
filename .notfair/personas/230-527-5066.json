@@ -1,0 +1,44 @@
+{
+  "account_id": "230-527-5066",
+  "saved_at": "2026-07-26",
+  "personas": [
+    {
+      "name": "Plumbing Business Owner Pete",
+      "demographics": "Male/Female, 35-55 years old, owner of a 5-25 truck plumbing company",
+      "primary_goal": "Scale revenue, stop losing money on missed after-hours calls, and automate technician dispatch",
+      "pain_points": [
+        "Losing high-value emergency calls to competitors after hours",
+        "Overwhelmed dispatchers making scheduling errors",
+        "High software costs for legacy solutions like ServiceTitan"
+      ],
+      "search_terms": [
+        "ai plumbing software",
+        "plumbing dispatch automation",
+        "servicetitan alternative for plumbers",
+        "how to automate plumbing business",
+        "best crm for plumbing contractors"
+      ],
+      "decision_trigger": "Missed a major commercial lead or scaling past 5 trucks",
+      "value": "High ($299-$799/mo ARR)"
+    },
+    {
+      "name": "Master Plumber & Operations Manager Mike",
+      "demographics": "Male, 30-50 years old, manages daily field dispatch and job billing",
+      "primary_goal": "Streamline technician routing, eliminate paperwork, and get invoices paid instantly on-site",
+      "pain_points": [
+        "Technicians spending hours typing notes instead of fixing pipes",
+        "Delayed customer payment processing",
+        "Manual call log entry into CRM"
+      ],
+      "search_terms": [
+        "plumbing dispatch software",
+        "instant plumbing invoicing app",
+        "ai call handling for plumbers",
+        "plumbing job scheduling software",
+        "plumbing field management software"
+      ],
+      "decision_trigger": "Technician burn-out and delayed payments",
+      "value": "Medium-High"
+    }
+  ]
+}
