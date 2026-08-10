@@ -13,15 +13,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized access token" }, { status: 401 });
   }
 
-  const scriptPath = path.join(process.cwd(), "scripts", "outreach_agent.py");
+  const scriptPath = path.join(process.cwd(), "scripts", "outreach_agent_semantica_v1.py");
 
   return new Promise<NextResponse>((resolve) => {
     const sanitizedLimit = parseInt(limit, 10) || 5;
 
     console.log(`[API CRON] Spawning outreach subprocess: limit=${sanitizedLimit}`);
     
+    // We source the semantica venv before running the python script so it has access to the graph engine
     exec(
-      `python3 "${scriptPath}" --limit ${sanitizedLimit}`,
+      `source ~/semantica/venv/bin/activate && python3 "${scriptPath}" --limit ${sanitizedLimit}`,
       (error, stdout, stderr) => {
         if (error) {
           console.error(`[API CRON ERROR] ${error.message}`);
