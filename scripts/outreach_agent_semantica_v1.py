@@ -14,17 +14,22 @@ import urllib.request
 import urllib.parse
 import argparse
 import re
+import urllib.error
 
 # ===============================
 # [Semantica Integration]
 # Import Semantica core framework
 # ===============================
+import sys
+# Force python to find semantica by appending its explicit path to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../semantica')))
+
 try:
     from semantica.core import Semantica
     has_semantica = True
-except ImportError:
+except Exception as e:
     has_semantica = False
-    print("[-] Semantica not found. Falling back to basic memory.")
+    print(f"[-] Semantica import failed: {e}")
     Semantica = None
 
 # Load Next.js local environment variables
@@ -352,7 +357,7 @@ def create_ghl_contact_note(contact_id, note_body, token):
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
         "Version": "2021-07-28",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0"
     }
     req = urllib.request.Request(
         url,
@@ -367,6 +372,50 @@ def create_ghl_contact_note(contact_id, note_body, token):
             return True
     except Exception as e:
         print(f"[-] Failed to post GHL note: {e}", file=sys.stderr)
+        return False
+
+# Actually Send Email via GoHighLevel CRM Conversations API
+def send_ghl_email(contact_id, subject, body_text, token):
+    print(f"[*] Sending LIVE email to GHL Contact ID: {contact_id} via Plumbify...")
+    url = "https://services.leadconnectorhq.com/conversations/messages"
+    
+    # Replace newlines with <br/> for HTML email body
+    html_body = body_text.replace("\n", "<br/>")
+    
+    payload = {
+        "type": "Email",
+        "contactId": contact_id,
+        "emailFrom": "info@lc.plumbify.net",
+        "subject": subject,
+        "html": html_body
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+        "Version": "2021-07-28",
+        "User-Agent": "Mozilla/5.0"
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            if response.status in [200, 201]:
+                res_data = json.loads(response.read().decode())
+                print(f"[+] Email successfully SENT! Message ID: {res_data.get('messageId', 'done')}")
+                return True
+            else:
+                print(f"[-] Failed to send email, status: {response.status}")
+                return False
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode()
+        print(f"[-] Failed to send GHL email HTTP Error: {e.code} - {err_msg}", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"[-] Failed to send GHL email: {e}", file=sys.stderr)
         return False
 
 # Single unified update to GHL contact profile (fields, tags, custom fields)
@@ -533,14 +582,28 @@ def main():
 
         print(f"[+] Generated Script:\n{outreach_copy}\n")
 
-        # Step 8: Write draft note to GoHighLevel contact profile
-        note_body = f"--- PLUMBIFY AI OUTREACH DRAFT ({mode.upper()}) ---\n\n{outreach_copy}"
+        # Step 8: Write draft note to GoHighLevel contact profile AND send LIVE email
+        note_body = f"--- PLUMBIFY AI OUTREACH SENT ({mode.upper()}) ---\n\n{outreach_copy}"
         note_success = create_ghl_contact_note(contact_id, note_body, ghl_token)
+        
+        # Parse Subject from the Gemini output
+        subject_line = f"Quick question for {contact.get('companyName', 'your team')}"
+        body_text = outreach_copy
+        lines = outreach_copy.split('\n')
+        if lines and lines[0].lower().startswith("subject:"):
+            subject_line = lines[0][8:].strip()
+            body_text = "\n".join(lines[1:]).strip()
+
+        # Send it directly to the customer's email!
+        email_success = send_ghl_email(contact_id, subject_line, body_text, ghl_token)
 
         # Step 9: Update tags and sync content to custom field
-        if note_success:
+        if note_success or email_success:
             new_tags = [t for t in current_tags if t not in ["cold-email-pending", "cold-sms-pending"]]
-            new_tags.append("outreach-drafted")
+            if email_success:
+                new_tags.append("outreach-sent")
+            else:
+                new_tags.append("outreach-drafted")
             
             custom_fields = None
             if custom_field_id:
