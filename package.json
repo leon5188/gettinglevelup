@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "outreach": "source ~/semantica/venv/bin/activate && python3 scripts/outreach_agent_semantica_v1.py"
   },
   "dependencies": {
     "@vercel/analytics": "^1.2.2",
