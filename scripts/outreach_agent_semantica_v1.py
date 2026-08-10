@@ -581,6 +581,26 @@ def main():
             continue
 
         print(f"[+] Generated Script:\n{outreach_copy}\n")
+        
+        # Determine current step from tags
+        current_step = 1
+        if "outreach-step-1" in current_tags:
+            current_step = 2
+        elif "outreach-step-2" in current_tags:
+            current_step = 3
+
+        # Use Semantica Graph to log the decision
+        if has_semantica:
+            try:
+                from semantica.context import ContextGraph
+                cg = ContextGraph()
+                cg.add_entity(contact_id, "PlumbingOwner", properties={
+                    "name": contact.get('companyName'),
+                    "current_step": current_step
+                })
+                print(f"[+] Semantica Context Graph Node created for: {contact_id}")
+            except Exception as e:
+                print(f"[-] Semantica context logging skipped: {e}")
 
         # Step 8: Write draft note to GoHighLevel contact profile AND send LIVE email
         note_body = f"--- PLUMBIFY AI OUTREACH SENT ({mode.upper()}) ---\n\n{outreach_copy}"
@@ -595,13 +615,15 @@ def main():
             body_text = "\n".join(lines[1:]).strip()
 
         # Send it directly to the customer's email!
-        email_success = send_ghl_email(contact_id, subject_line, body_text, ghl_token)
+        email_success = False
+        if mode == "email":
+            email_success = send_ghl_email(contact_id, subject_line, body_text, ghl_token)
 
         # Step 9: Update tags and sync content to custom field
         if note_success or email_success:
             new_tags = [t for t in current_tags if t not in ["cold-email-pending", "cold-sms-pending"]]
             if email_success:
-                new_tags.append("outreach-sent")
+                new_tags.append(f"outreach-step-{current_step}")
             else:
                 new_tags.append("outreach-drafted")
             
