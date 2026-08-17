@@ -29,11 +29,9 @@ export default function SnooRiseDashboard() {
     }
   };
 
-  // Reddit Username Profile Check State
-  const [redditUsernameInput, setRedditUsernameInput] = useState('');
-  const [connectedUser, setConnectedUser] = useState<any>(null);
-  const [loadingDirectLogin, setLoadingDirectLogin] = useState(false);
-  const [loginError, setLoginError] = useState('');
+  // Reddit Session State (OAuth 2.0)
+  const [connectedUser, setConnectedUser] = useState<{ connected: boolean; username?: string } | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
 
   // Active Selected Subreddit Selector
   const [activeSubFilter, setActiveSubFilter] = useState('r/plumbing');
@@ -44,9 +42,11 @@ export default function SnooRiseDashboard() {
   const [selectedKarmaPost, setSelectedKarmaPost] = useState<any>(null);
   const [generatedKarmaReply, setGeneratedKarmaReply] = useState('');
   const [loadingKarmaGen, setLoadingKarmaGen] = useState(false);
+  const [postingCommentId, setPostingCommentId] = useState<string | null>(null);
 
   // Live Intent Leads Stream State (Zero Dummy Data)
   const [intentLeads, setIntentLeads] = useState<any[]>([]);
+  const [scanStats, setScanStats] = useState<{ harvested: number; passedPrefilter: number; scored: number } | null>(null);
   const [loadingIntentScan, setLoadingIntentScan] = useState(false);
 
   // Dynamic Rules Radar State (Subrise Engine)
@@ -89,6 +89,56 @@ export default function SnooRiseDashboard() {
   const [syncStatus, setSyncStatus] = useState('');
   const [loadingSync, setLoadingSync] = useState(false);
 
+  // Check Reddit Session on Mount
+  const checkSession = async () => {
+    setLoadingSession(true);
+    const data = await safeFetchJSON('/api/snoorise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reddit_session' })
+    });
+    if (data && data.success) {
+      setConnectedUser(data.connected ? { connected: true, username: data.username } : { connected: false });
+    } else {
+      setConnectedUser({ connected: false });
+    }
+    setLoadingSession(false);
+  };
+
+  const handleDisconnect = async () => {
+    showToast('🚀 正在断开 Reddit 账号连接...');
+    const data = await safeFetchJSON('/api/snoorise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reddit_disconnect' })
+    });
+    if (data && data.success) {
+      setConnectedUser({ connected: false });
+      showToast('✅ 已成功断开 Reddit 账号。');
+    }
+  };
+
+  // Post comment via Reddit OAuth API
+  const handlePostComment = async (thingId: string, commentText: string) => {
+    if (!commentText?.trim()) {
+      showToast('❌ 请先填写评论内容！');
+      return;
+    }
+    setPostingCommentId(thingId);
+    showToast('🚀 正在通过 Reddit OAuth API 发表评论...');
+    const data = await safeFetchJSON('/api/snoorise', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'post_comment', thingId, commentText })
+    });
+    if (data && data.success) {
+      showToast(`🎉 评论发表成功！以 u/${connectedUser?.username} 身份完成。`);
+    } else {
+      showToast(`❌ 发表失败: ${data?.error || '请确认已登录 Reddit 账号'}`);
+    }
+    setPostingCommentId(null);
+  };
+
   // Fetch 100% Real Live Intent Leads Stream
   const handleScanIntentLeads = async () => {
     setLoadingIntentScan(true);
@@ -98,9 +148,10 @@ export default function SnooRiseDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'scan_intent_leads' })
     });
-    if (data && data.success && data.intentLeads) {
-      setIntentLeads(data.intentLeads);
-      showToast(`✅ 实时扫描成功！捕获到 ${data.intentLeads.length} 条真实高意向求助买家！`);
+    if (data && data.success && data.leads) {
+      setIntentLeads(data.leads);
+      if (data.stats) setScanStats(data.stats);
+      showToast(`✅ 实时扫描成功！捕获到 ${data.leads.length} 条真实高意向买家！`);
     } else {
       showToast(`❌ 扫盘提示: ${data?.error || "请重试"}`);
     }
@@ -130,44 +181,15 @@ export default function SnooRiseDashboard() {
 
   // Auto Fetch Real Live Reddit Data on Mount
   useEffect(() => {
+    checkSession();
     handleScanKarmaPosts(activeSubFilter);
     handleScanIntentLeads();
   }, []);
 
-  // Public Profile Check (No Passwords Handled)
-  const handleVerifyPublicRedditProfile = async () => {
-    if (!redditUsernameInput.trim()) {
-      setLoginError('请输入您的 Reddit 用户名！');
-      return;
-    }
-    setLoadingDirectLogin(true);
-    setLoginError('');
-    showToast(`🚀 正在连接 Reddit 官方 API 查验 u/${redditUsernameInput}...`);
-    
-    const data = await safeFetchJSON('/api/snoorise', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'snoogrow_direct_login',
-        redditUsername: redditUsernameInput
-      })
-    });
-
-    if (data && data.success) {
-      setConnectedUser(data);
-      showToast(`🎉 成功查验真实公开账号 u/${data.username}！`);
-    } else {
-      setConnectedUser(null);
-      setLoginError(data?.error || '查验失败');
-      showToast(`❌ ${data?.error || '查验失败'}`);
-    }
-    setLoadingDirectLogin(false);
-  };
-
   const handleGenerateKarmaReply = async (post: any) => {
     setSelectedKarmaPost(post);
     setLoadingKarmaGen(true);
-    showToast(`🧠 正在调用 Gemini 1.5 Flash 为真实热帖《${post.title.slice(0, 15)}...》撰写高赞回复...`);
+    showToast(`🧠 正在调用 Gemini 2.0 Flash 为热帖《${post.title.slice(0, 15)}...》撰写高赞回复...`);
     const data = await safeFetchJSON('/api/snoorise', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -175,7 +197,7 @@ export default function SnooRiseDashboard() {
     });
     if (data && data.success) {
       setGeneratedKarmaReply(data.karmaReply);
-      showToast('✨ Gemini 1.5 Flash 真实干货回复生成完毕！');
+      showToast('✨ Gemini 2.0 Flash 真实干货回复生成完毕！');
     } else {
       showToast(`❌ ${data?.error || '回复生成遇到问题'}`);
     }
@@ -222,7 +244,7 @@ export default function SnooRiseDashboard() {
   const handleGenerateReply = async () => {
     setLoadingGen(true);
     setGeneratedReply('');
-    showToast('🧠 正在调用 Gemini 1.5 Flash 生成 90:10 零防封地道回复...');
+    showToast('🧠 正在调用 Gemini 2.0 Flash 生成 90:10 零防封地道回复...');
     const data = await safeFetchJSON('/api/snoorise', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -296,29 +318,41 @@ export default function SnooRiseDashboard() {
           <div className="flex items-center space-x-3">
             <span className="text-3xl">🚀</span>
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">
-              SnooRise AI Platform (Compliant & Secure)
+              SnooRise AI Platform (Official OAuth 2.0)
             </h1>
             <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-full font-mono">
-              100% Compliant Workflow
+              100% Safe OAuth Flow
             </span>
           </div>
           <p className="text-slate-400 text-sm mt-1">
-            🎯 捕获正在寻找水管/维修服务的房主 ➔ Gemini AI 草拟专业干货回复 ➔ 承包商一键复制并秒开原帖发布
+            🎯 捕获正在寻找水管/维修服务的房主 ➔ Gemini AI 草拟专业干货回复 ➔ 官方 OAuth 授权一键评论
           </p>
         </div>
 
-        {/* Account Badge */}
+        {/* Account OAuth Badge */}
         <div className="flex items-center space-x-3">
-          {connectedUser ? (
-            <div className="flex items-center space-x-2 bg-emerald-950/60 border border-emerald-800 px-4 py-2 rounded-xl text-xs font-mono text-emerald-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>已查验 Reddit 账号: <strong>u/{connectedUser.username}</strong></span>
+          {loadingSession ? (
+            <div className="text-xs text-slate-400 font-mono">检查登录中...</div>
+          ) : connectedUser?.connected ? (
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-emerald-950/60 border border-emerald-800 px-4 py-2 rounded-xl text-xs font-mono text-emerald-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>已连接 Reddit: <strong>u/{connectedUser.username}</strong></span>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="bg-slate-900 border border-slate-700 hover:border-red-500/50 text-slate-400 hover:text-red-400 text-xs px-3 py-2 rounded-xl transition"
+              >
+                断开
+              </button>
             </div>
           ) : (
-            <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-4 py-2 rounded-xl text-xs font-mono text-slate-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>受信任合规模式 (无需提供密码)</span>
-            </div>
+            <a
+              href="/api/snoorise/auth"
+              className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:opacity-90 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg transition flex items-center space-x-2"
+            >
+              <span>🔗 官方 OAuth 授权连接 Reddit</span>
+            </a>
           )}
         </div>
       </header>
@@ -360,8 +394,21 @@ export default function SnooRiseDashboard() {
                   <span>🎯 全网 Reddit 真实意向买家与求助帖监控流 (100% Real Live Stream)</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  100% 实时从 Reddit 抓取高意向买家提问，点击链接 100% 打开真实的评论原贴！
+                  100% 实时从 Reddit 抓取高意向买家提问，智能打分筛选优质 Lead！
                 </p>
+                {scanStats && (
+                  <div className="flex space-x-3 text-xs font-mono mt-2 text-slate-300">
+                    <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800">
+                      抓取总数: <strong className="text-amber-400">{scanStats.harvested}</strong>
+                    </span>
+                    <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800">
+                      规则关卡规则过滤: <strong className="text-teal-400">{scanStats.passedPrefilter}</strong>
+                    </span>
+                    <span className="bg-slate-950 px-2.5 py-1 rounded border border-slate-800">
+                      AI 判定高意向: <strong className="text-emerald-400">{scanStats.scored}</strong>
+                    </span>
+                  </div>
+                )}
               </div>
               <button
                 onClick={handleScanIntentLeads}
@@ -381,25 +428,25 @@ export default function SnooRiseDashboard() {
 
               {intentLeads.length > 0 ? (
                 intentLeads.map((lead) => (
-                  <div key={lead.id} className="bg-slate-900/80 border border-slate-800 hover:border-orange-500/50 transition duration-200 rounded-2xl p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 space-x-0 md:space-x-4">
+                  <div key={lead.id || lead.name} className="bg-slate-900/80 border border-slate-800 hover:border-orange-500/50 transition duration-200 rounded-2xl p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 space-x-0 md:space-x-4">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center space-x-3">
                         <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs px-2.5 py-0.5 rounded-full font-mono font-bold">
                           {lead.subreddit}
                         </span>
                         <span className="text-xs font-bold text-slate-300">{lead.author}</span>
-                        <span className="text-xs text-slate-500">• {lead.time}</span>
+                        <span className="text-xs text-slate-500">• {lead.createdUtc ? new Date(lead.createdUtc * 1000).toLocaleTimeString() : '最新'}</span>
                       </div>
                       <h3 className="text-base font-bold text-slate-100">{lead.title}</h3>
                       <p className="text-xs text-slate-400 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-                        "{lead.snippet}"
+                        "{lead.snippet || lead.body}"
                       </p>
                     </div>
 
                     <div className="flex flex-col items-end space-y-3 w-full md:w-auto">
                       <div className="flex items-center space-x-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-bold">
                         <span>意向得分:</span>
-                        <span>{lead.intentScore} / 5</span>
+                        <span>{lead.score || lead.intentScore || 5} / 5</span>
                       </div>
 
                       <div className="flex space-x-2 w-full md:w-auto">
@@ -407,9 +454,9 @@ export default function SnooRiseDashboard() {
                           href={lead.permalink}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 md:flex-none bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition border border-orange-500/40 block text-center shadow-md"
+                          className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2.5 rounded-lg transition border border-slate-700 block text-center shadow-md"
                         >
-                          ↗ 秒开 Reddit 原贴
+                          ↗ 打开 Reddit 原贴
                         </a>
                         <button
                           onClick={() => handleSyncCRM(lead)}
@@ -439,72 +486,19 @@ export default function SnooRiseDashboard() {
           </div>
         )}
 
-        {/* Tab 1: Real Live Karma Posts & Compliant One-Click Posting */}
+        {/* Tab 1: Real Live Karma Posts & OAuth One-Click Posting */}
         {activeTab === 'karma' && (
           <div className="space-y-8">
-            {/* Public Username Verification */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-                  <span>⚡ 查验您的 Reddit 公开 Profile (只读 API 查验)</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  100% 遵循官方 OAuth 安全规范：无需输入密码凭据，输入用户名即可查验公开 Karma 与账号状态。
-                </p>
-              </div>
-
-              <div className="flex space-x-3">
-                <input
-                  type="text"
-                  value={redditUsernameInput}
-                  onChange={(e) => setRedditUsernameInput(e.target.value)}
-                  placeholder="输入您的 Reddit Username (例: No-Adeptness3065)"
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:border-orange-500 outline-none font-mono"
-                />
-                <button
-                  onClick={handleVerifyPublicRedditProfile}
-                  disabled={loadingDirectLogin}
-                  className="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition text-sm shadow-md whitespace-nowrap"
-                >
-                  {loadingDirectLogin ? '打向 API 查验中...' : '🚀 查验我的公开 Reddit 账号'}
-                </button>
-              </div>
-
-              {loginError && (
-                <div className="p-3 bg-red-950/40 border border-red-800/50 text-red-400 text-xs rounded-xl font-mono">
-                  ❌ {loginError}
-                </div>
-              )}
-
-              {/* Display Connected Account Info */}
-              {connectedUser && (
-                <div className="p-5 bg-slate-950 border border-slate-800 rounded-xl space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">🟢</span>
-                      <div>
-                        <span className="font-extrabold text-slate-100 text-base">u/{connectedUser.username}</span>
-                        <span className="text-xs text-emerald-400 block">✅ 来自 Reddit 官方 REST API 的公开数据</span>
-                      </div>
-                    </div>
-                    <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-3 py-1 rounded-full font-mono font-bold">
-                      Karma: {connectedUser.totalKarma || '正常'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Real Live Reddit Hot Posts Scanner */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-                      <span>🔥 Reddit 在榜热帖实时扫描与 AI 文案一键直达</span>
+                      <span>🔥 Reddit 在榜热帖实时扫描与 AI 文案一键发帖</span>
                     </h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      选择不同社区，实时生成高赞干货回复，点击按钮即可一键复制并直达 Reddit 原贴完成发布：
+                      选择社区，实时生成高赞干货回复，支持用连接好的 Reddit OAuth 账号一键评论：
                     </p>
                   </div>
                   <button
@@ -549,7 +543,7 @@ export default function SnooRiseDashboard() {
                   {karmaPosts.length > 0 ? (
                     karmaPosts.map((post) => (
                       <div
-                        key={post.id}
+                        key={post.id || post.name}
                         onClick={() => handleGenerateKarmaReply(post)}
                         className={`p-4 rounded-xl border transition duration-200 cursor-pointer space-y-2.5 ${
                           selectedKarmaPost?.id === post.id ? 'bg-slate-900 border-orange-500 shadow-xl' : 'bg-slate-950 border-slate-800 hover:border-orange-500/50'
@@ -567,22 +561,6 @@ export default function SnooRiseDashboard() {
                           <span>👍 {post.upvotes} 点赞 • 💬 {post.comments} 讨论</span>
                           <span className="text-orange-400 font-bold hover:underline">点击生成 AI 高赞回复 ➔</span>
                         </div>
-
-                        <div className="pt-2">
-                          <a
-                            href={post.permalink}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopyText(generatedKarmaReply);
-                            }}
-                            className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2 shadow-md block text-center"
-                          >
-                            <span>🚀 复制 AI 评论并【秒开文章正文评论区】</span>
-                            <span>↗</span>
-                          </a>
-                        </div>
                       </div>
                     ))
                   ) : (
@@ -597,7 +575,7 @@ export default function SnooRiseDashboard() {
                 {/* Gemini Reply Card */}
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-bold text-slate-300">✍️ Gemini 1.5 Flash 针对选定文章生成的专属高赞回复：</h4>
+                    <h4 className="text-xs font-bold text-slate-300">✍️ Gemini 2.0 Flash 专属高赞回复：</h4>
                     {loadingKarmaGen && <span className="text-xs text-orange-400 font-mono animate-pulse">AI 生成中...</span>}
                   </div>
 
@@ -605,23 +583,39 @@ export default function SnooRiseDashboard() {
                     <div className="space-y-4">
                       <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl relative">
                         <span className="absolute top-2.5 right-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded font-mono">
-                          REAL ARTICLE TARGETED
+                          TARGET: {selectedKarmaPost.name || selectedKarmaPost.id}
                         </span>
                         <pre className="whitespace-pre-wrap font-sans text-xs text-slate-200 leading-relaxed">
-                          {loadingKarmaGen ? '调用 Gemini 1.5 Flash 针对真实文章生成中...' : generatedKarmaReply}
+                          {loadingKarmaGen ? '调用 Gemini 2.0 Flash 针对真实文章生成中...' : generatedKarmaReply}
                         </pre>
                       </div>
 
                       <div className="space-y-3">
+                        {connectedUser?.connected ? (
+                          <button
+                            onClick={() => handlePostComment(selectedKarmaPost.name, generatedKarmaReply)}
+                            disabled={postingCommentId === selectedKarmaPost.name || loadingKarmaGen}
+                            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white text-xs font-extrabold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2"
+                          >
+                            <span>{postingCommentId === selectedKarmaPost.name ? '🚀 正在发表评论...' : `⚡ 以 u/${connectedUser.username} 身份一键发评论`}</span>
+                          </button>
+                        ) : (
+                          <a
+                            href="/api/snoorise/auth"
+                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:opacity-90 text-white text-xs font-extrabold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2 block text-center"
+                          >
+                            <span>🔗 先授权连接 Reddit 账号即可一键发布</span>
+                          </a>
+                        )}
+
                         <a
                           href={selectedKarmaPost.permalink}
                           target="_blank"
                           rel="noreferrer"
                           onClick={() => handleCopyText(generatedKarmaReply)}
-                          className="w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:opacity-90 text-white text-xs font-extrabold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2 block text-center"
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold py-2.5 rounded-xl transition border border-slate-800 flex items-center justify-center space-x-2 block text-center"
                         >
-                          <span>🚀 复制文案 + 秒开《{selectedKarmaPost.title.slice(0, 15)}...》原贴发布</span>
-                          <span>↗</span>
+                          <span>📋 复制文案 + 秒开原贴 ↗</span>
                         </a>
                       </div>
                     </div>
@@ -629,7 +623,7 @@ export default function SnooRiseDashboard() {
                     <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg space-y-2">
                       <span className="text-2xl">👈</span>
                       <span>请在左侧点击任意真实文章卡片</span>
-                      <span className="text-slate-600">系统将即刻调用 Gemini 1.5 Flash 生成专属高赞干货！</span>
+                      <span className="text-slate-600">系统将即刻调用 Gemini 2.0 Flash 生成专属高赞干货！</span>
                     </div>
                   )}
                 </div>
@@ -699,7 +693,7 @@ export default function SnooRiseDashboard() {
                     disabled={loadingGen}
                     className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:opacity-90 text-white font-extrabold py-3.5 rounded-xl transition text-sm shadow-xl flex items-center justify-center space-x-2"
                   >
-                    <span>{loadingGen ? '🧠 Gemini 1.5 Flash 深度推理生成中...' : '🚀 生成 90:10 零防封地道回复 (Generate Native 90:10 Reply)'}</span>
+                    <span>{loadingGen ? '🧠 Gemini 2.0 Flash 深度推理生成中...' : '🚀 生成 90:10 零防封地道回复 (Generate Native 90:10 Reply)'}</span>
                   </button>
                 </div>
               </div>
@@ -735,7 +729,7 @@ export default function SnooRiseDashboard() {
                   <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl space-y-2">
                     <span className="text-3xl">🧠</span>
                     <span className="text-slate-400 font-bold">尚未生成回复</span>
-                    <span className="text-slate-600">选择上方预设场景或自定义上下文，点击按钮调用 Gemini 1.5 Flash！</span>
+                    <span className="text-slate-600">选择上方预设场景或自定义上下文，点击按钮调用 Gemini 2.0 Flash！</span>
                   </div>
                 )}
               </div>

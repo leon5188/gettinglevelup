@@ -243,8 +243,8 @@ export default function AIAgentWidget({ isEmbedPage: isEmbedPageProp }: { isEmbe
     }
   }, [isOpen]);
 
-  // Hide widget layout on sub-embed route
-  if (!isEmbedPage && pathname === "/widget-embed") {
+  // Hide widget layout on sub-embed and dashboard routes
+  if (!isEmbedPage && (pathname === "/widget-embed" || pathname?.startsWith("/dashboard"))) {
     return null;
   }
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ROICalculator from "@/components/ROICalculator";
+import OperationalDispatchDesk from "@/components/OperationalDispatchDesk";
 import Link from "next/link";
 import { 
   ArrowRight, 
@@ -170,7 +171,7 @@ export default function Home() {
           <div className="lg:col-span-7 text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20 uppercase tracking-wider">
               <Sparkles size={12} className="animate-pulse" />
-              <span>Omnichannel CRM For Residential Plumbers</span>
+              <span>Omnichannel CRM For Plumbing Contractors</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08]">
@@ -304,6 +305,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* OPERATIONAL DISPATCH DESK SHOWCASE */}
+      <OperationalDispatchDesk />
 
       {/* CUSTOMER LOGOS DISPLAYED BANNER (Step 5) */}
       <section className="py-12 bg-slate-900/40 border-y border-slate-900 px-6">

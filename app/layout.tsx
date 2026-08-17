@@ -8,6 +8,7 @@ import AIAgentWidget from "@/components/AIAgentWidget";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://plumbify.ai"),
   title: {
     default: "Plumbify | The AI Operating System for Plumbers",
     template: "%s | Plumbify"
