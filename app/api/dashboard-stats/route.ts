@@ -4,8 +4,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const GHL_API_KEY = process.env.GHL_PRIVATE_TOKEN || process.env.GHL_API_KEY || "pit-4d3ec91e-0a56-42d7-b86a-71d3c01bfec5";
-    const LOCATION_ID = process.env.GHL_LOCATION_ID || "RHROdkS0TNPBFZHcZsX0";
+    const GHL_API_KEY = process.env.GHL_PRIVATE_TOKEN || process.env.GHL_API_KEY || "";
+    const LOCATION_ID = process.env.GHL_LOCATION_ID || "";
 
     const headers = {
       "Authorization": `Bearer ${GHL_API_KEY}`,

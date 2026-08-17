@@ -42,8 +42,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized access token" }, { status: 401 });
   }
 
-  const apiKey = process.env.GHL_API_KEY || "pit-4d3ec91e-0a56-42d7-b86a-71d3c01bfec5";
-  const locationId = process.env.GHL_LOCATION_ID || "RHROdkS0TNPBFZHcZsX0";
+  const apiKey = process.env.GHL_API_KEY || process.env.GHL_PRIVATE_TOKEN || "";
+  const locationId = process.env.GHL_LOCATION_ID || "";
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
