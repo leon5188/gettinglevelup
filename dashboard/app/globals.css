@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #0052FF;
+  --secondary: #00D1FF;
+  --accent: #FF3B30;
+}
+
+@layer base {
+  body {
+    @apply selection:bg-blue-100 selection:text-blue-700;
+  }
+  h1, h2, h3, h4 {
+    @apply tracking-tight font-bold text-slate-900;
+  }
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.bento-item {
+  @apply rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white border border-slate-200;
+}
