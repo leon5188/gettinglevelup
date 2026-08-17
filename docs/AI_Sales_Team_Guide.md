@@ -18,16 +18,16 @@
 
 ```bash
 # 您的 Gemini 大模型 API Key（用于提炼数据和写开发信）
-GEMINI_API_KEY="AIzaSyA0Nl..."
+GEMINI_API_KEY="your_gemini_api_key_here"
 
 # 您的 GoHighLevel 私有 API 令牌
-GHL_PRIVATE_TOKEN="pit-148a1a..."
+GHL_PRIVATE_TOKEN="your_ghl_private_token_here"
 
 # 您的 GoHighLevel 商业位置 ID
-GHL_LOCATION_ID="RHROdkS..."
+GHL_LOCATION_ID="your_ghl_location_id_here"
 
 # （新增）用于保护定时任务路由的安全密码
-CRON_SECRET="plumbify_cron_default_secret_2026"
+CRON_SECRET="your_custom_cron_secret"
 ```
 
 ---
