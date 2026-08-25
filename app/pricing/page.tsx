@@ -13,9 +13,9 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const starterUrl = process.env.NEXT_PUBLIC_STARTER_CHECKOUT_URL || "#";
-  const growthUrl = process.env.NEXT_PUBLIC_GROWTH_CHECKOUT_URL || "#";
-  const strategyUrl = process.env.NEXT_PUBLIC_STRATEGY_BOOKING_URL || "#";
+  const starterUrl = process.env.NEXT_PUBLIC_STARTER_CHECKOUT_URL || "/demo?plan=starter";
+  const growthUrl = process.env.NEXT_PUBLIC_GROWTH_CHECKOUT_URL || "/demo?plan=growth";
+  const strategyUrl = process.env.NEXT_PUBLIC_STRATEGY_BOOKING_URL || "/demo?plan=enterprise";
 
   const prices = {
     starter: billingPeriod === "monthly" ? 197 : 157,

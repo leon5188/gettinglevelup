@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const fullName = (name || companyName || 'Plumbing Owner').trim();
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0];
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '(Owner)';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
     const ghlPayload = {
       locationId: locationId,
