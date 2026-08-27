@@ -1,12 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/ghl-agent?secret=plumbify_cron_default_secret_2026",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/outreach?secret=plumbify_cron_default_secret_2026&limit=5",
-      "schedule": "*/30 * * * *"
-    }
-  ]
+  "crons": []
 }

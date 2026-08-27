@@ -64,7 +64,18 @@ function classifyInboundIntent(inboundText: string, name: string, company: strin
   };
 }
 
+// 外呼发送默认关闭。cron secret 明文写在 vercel.json 里，任何人都能打这个端点，
+// 所以停用不能只靠删 cron 条目。要重新启用，把 OUTREACH_SENDING_ENABLED 设成 "true"。
+const OUTREACH_SENDING_ENABLED = process.env.OUTREACH_SENDING_ENABLED === "true";
+
 export async function GET(request: Request) {
+  if (!OUTREACH_SENDING_ENABLED) {
+    return NextResponse.json(
+      { disabled: true, reason: "OUTREACH_SENDING_ENABLED is not set to \"true\"" },
+      { status: 503 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get("secret");
 
